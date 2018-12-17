@@ -1,0 +1,13 @@
+edition = "2018"
+binop_separator = "Back" # Unstable
+wrap_comments = true # Unstable
+comment_width = 80 # Unstable
+#merge_imports = true # Unstable
+match_block_trailing_comma = true # Unstable
+max_width = 100
+reorder_impl_items = true # Unstable
+trailing_semicolon = false # Unstable
+use_field_init_shorthand = true
+use_try_shorthand = true
+format_doc_comments = true # Unstable
+format_macro_bodies = false # Unstable
