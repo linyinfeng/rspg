@@ -1,28 +1,57 @@
+use crate::display::DisplayWith;
+use crate::grammar::NonterminalIndex;
+use crate::grammar::TerminalIndex;
 use crate::grammar::{Grammar, Rule, Symbol};
-use std::collections::BTreeMap;
+use crate::utility::vec_with_size;
 use std::collections::BTreeSet;
 use std::fmt;
 
 #[derive(Debug, Clone)]
-pub struct FirstSet<T> {
-    pub terminals: BTreeSet<T>,
+pub struct FirstSet {
+    pub terminals: BTreeSet<TerminalIndex>,
     pub can_be_empty: bool,
 }
 
-impl<T: fmt::Debug> fmt::Display for FirstSet<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+impl fmt::Display for FirstSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{{")?;
-        let mut index = 0usize;
+        let mut i = 0usize;
         let mut iter = self.terminals.iter();
-        while index < self.terminals.len() {
-            if index != 0usize {
+        while i < self.terminals.len() {
+            if i != 0usize {
                 write!(f, ", ")?;
             }
-            write!(f, "{:?}", iter.next().unwrap())?;
-            index += 1;
+            write!(f, "{}", iter.next().unwrap())?;
+            i += 1;
         }
         if self.can_be_empty {
-            if index != 0usize {
+            if i != 0usize {
+                write!(f, ", ")?;
+            }
+            write!(f, "ε")?;
+        }
+        write!(f, "}}")?;
+        Ok(())
+    }
+}
+
+impl<N, T> DisplayWith<Grammar<N, T>> for FirstSet
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
+        write!(f, "{{")?;
+        let mut i = 0usize;
+        let mut iter = self.terminals.iter();
+        while i < self.terminals.len() {
+            if i != 0usize {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", iter.next().unwrap().display_with(grammar))?;
+            i += 1;
+        }
+        if self.can_be_empty {
+            if i != 0usize {
                 write!(f, ", ")?;
             }
             write!(f, "ε")?;
@@ -33,163 +62,190 @@ impl<T: fmt::Debug> fmt::Display for FirstSet<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct FirstSets<N, T> {
-    pub sets: BTreeMap<N, FirstSet<T>>,
-}
+pub struct FirstSets(Vec<FirstSet>);
 
-impl<T: fmt::Debug> fmt::Display for FirstSets<&'static str, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        for (nonterminal, first_set) in &self.sets {
-            writeln!(f, "{}: {}", nonterminal, first_set)?;
-        }
-        Ok(())
+impl FirstSets {
+    pub fn first_set_of_nonterminal(&self, nonterminal: NonterminalIndex) -> &FirstSet {
+        &self.0[nonterminal.value()]
     }
-}
 
-pub fn first_sets_of_grammar<N, T>(grammar: &Grammar<N, T>) -> FirstSets<N, T>
-where
-    N: Ord + Copy,
-    T: Ord + Copy,
-{
-    let mut sets = FirstSets {
-        sets: BTreeMap::new(),
-    };
-    for nonterminal in grammar.index.keys() {
-        sets.sets.insert(
-            nonterminal.clone(),
-            FirstSet {
-                terminals: BTreeSet::new(),
-                can_be_empty: false,
-            },
-        );
+    fn first_set_of_nonterminal_mut(&mut self, nonterminal: NonterminalIndex) -> &mut FirstSet {
+        &mut self.0[nonterminal.value()]
     }
-    loop {
-        if !first_sets_iteration(&mut sets, grammar) {
-            // if not changed
-            break
-        }
-    }
-    sets
-}
 
-fn first_sets_iteration<N, T>(first_sets: &mut FirstSets<N, T>, grammar: &Grammar<N, T>) -> bool
-where
-    N: Ord + Copy,
-    T: Ord + Copy,
-{
-    let mut changed = false;
-    for Rule { left, right } in &grammar.rules {
+    pub fn first_set_of_symbol_string(&self, symbol_string: &[Symbol]) -> FirstSet {
+        let mut first_set = FirstSet {
+            terminals: BTreeSet::new(),
+            can_be_empty: false,
+        };
         let mut empty_count = 0;
-        for symbol in right {
+        for symbol in symbol_string {
             match symbol {
                 Symbol::Nonterminal(n) => {
-                    changed |= merge_to_first_sets(first_sets, left, n);
-                    if first_sets.sets[n].can_be_empty {
+                    let set = self.first_set_of_nonterminal(*n);
+                    first_set.terminals.extend(&set.terminals);
+                    if set.can_be_empty {
                         empty_count += 1;
                     } else {
                         break
                     }
                 },
                 Symbol::Terminal(t) => {
-                    changed |= add_to_first_sets(first_sets, left, *t);
+                    first_set.terminals.insert(*t);
                     break
                 },
             }
         }
-        if empty_count == right.len() {
-            let can_be_empty = &mut first_sets.sets.get_mut(left).unwrap().can_be_empty;
-            if !(*can_be_empty) {
-                changed = true;
-            }
-            *can_be_empty = true;
+        if empty_count == symbol_string.len() {
+            first_set.can_be_empty = true;
         }
+        first_set
     }
-    changed
-}
 
-fn add_to_first_sets<N, T>(first_sets: &mut FirstSets<N, T>, to: &N, with: T) -> bool
-where
-    N: Ord,
-    T: Ord,
-{
-    let first_set = first_sets.sets.get_mut(&to).unwrap();
-    if !first_set.terminals.contains(&with) {
-        first_set.terminals.insert(with);
-        true
-    } else {
-        false
-    }
-}
-
-fn merge_to_first_sets<N, T>(first_sets: &mut FirstSets<N, T>, to: &N, from: &N) -> bool
-where
-    N: Ord,
-    T: Ord + Copy,
-{
-    let mut from_set = first_sets.sets[from].terminals.clone();
-    let to_set = &mut first_sets.sets.get_mut(to).unwrap().terminals;
-    let length_before = to_set.len();
-    to_set.append(&mut from_set);
-    let length_after = to_set.len();
-    length_after != length_before
-}
-
-pub fn first_set_of_symbol_string<N, T>(
-    first_sets: &FirstSets<N, T>,
-    symbol_string: &[Symbol<N, T>],
-) -> FirstSet<T>
-where
-    N: Ord,
-    T: Ord + Copy,
-{
-    let mut first_set = FirstSet {
-        terminals: BTreeSet::new(),
-        can_be_empty: false,
-    };
-    let mut empty_count = 0;
-    for symbol in symbol_string {
-        match symbol {
-            Symbol::Nonterminal(n) => {
-                let set = first_sets.sets.get(n).expect("unexpected nonterminal");
-                first_set.terminals.extend(&set.terminals);
-                if set.can_be_empty {
-                    empty_count += 1;
-                } else {
-                    break
-                }
+    pub fn of_grammar<N, T>(grammar: &Grammar<N, T>) -> FirstSets {
+        let mut sets = FirstSets(vec_with_size(
+            grammar.nonterminals_len(),
+            FirstSet {
+                terminals: BTreeSet::new(),
+                can_be_empty: false,
             },
-            Symbol::Terminal(t) => {
-                first_set.terminals.insert(*t);
+        ));
+        loop {
+            if !sets.iteration(&grammar) {
+                // if not changed
                 break
-            },
+            }
+        }
+        sets
+    }
+
+    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>) -> bool {
+        let mut changed = false;
+        for Rule { left, right } in grammar.rules() {
+            let mut empty_count = 0;
+            for symbol in right.iter() {
+                match symbol {
+                    Symbol::Nonterminal(n) => {
+                        changed |= self.merge_first_set_to_first_set(*left, *n);
+                        if self.first_set_of_nonterminal(*n).can_be_empty {
+                            empty_count += 1;
+                        } else {
+                            break
+                        }
+                    },
+                    Symbol::Terminal(t) => {
+                        changed |= self.merge_nonterminal_to_first_set(*left, *t);
+                        break
+                    },
+                }
+            }
+            if empty_count == right.len() {
+                let can_be_empty = &mut self.first_set_of_nonterminal_mut(*left).can_be_empty;
+                if !(*can_be_empty) {
+                    changed = true;
+                }
+                *can_be_empty = true;
+            }
+        }
+        changed
+    }
+
+    fn merge_nonterminal_to_first_set(
+        &mut self,
+        to: NonterminalIndex,
+        with: TerminalIndex,
+    ) -> bool {
+        let first_set = self.first_set_of_nonterminal_mut(to);
+        if !first_set.terminals.contains(&with) {
+            first_set.terminals.insert(with);
+            true
+        } else {
+            false
         }
     }
-    if empty_count == symbol_string.len() {
-        first_set.can_be_empty = true;
+
+    fn merge_first_set_to_first_set(
+        &mut self,
+        to: NonterminalIndex,
+        from: NonterminalIndex,
+    ) -> bool {
+        let mut from_set = self.first_set_of_nonterminal(from).terminals.clone();
+        let to_set = &mut self.first_set_of_nonterminal_mut(to).terminals;
+        let length_before = to_set.len();
+        to_set.append(&mut from_set);
+        let length_after = to_set.len();
+        length_after != length_before
     }
-    first_set
 }
 
-#[derive(Debug, Clone)]
-pub struct FollowSet<T> {
-    pub terminals: BTreeSet<T>,
+impl<N, T> DisplayWith<Grammar<N, T>> for FirstSets
+where
+    N: fmt::Display,
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
+        for i in grammar.nonterminal_indices() {
+            if i.value() != 0 {
+                writeln!(f)?;
+            }
+            write!(f, "{}", i.display_with(grammar))?;
+            write!(f, ": ")?;
+            write!(
+                f,
+                "{}",
+                self.first_set_of_nonterminal(i).display_with(grammar)
+            )?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone)]
+pub struct FollowSet {
+    pub terminals: BTreeSet<TerminalIndex>,
     pub can_be_end: bool,
 }
 
-impl<T: fmt::Debug> fmt::Display for FollowSet<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+impl fmt::Display for FollowSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{{")?;
-        let mut index = 0usize;
+        let mut i = 0usize;
         let mut iter = self.terminals.iter();
-        while index < self.terminals.len() {
-            if index != 0usize {
+        while i < self.terminals.len() {
+            if i != 0usize {
                 write!(f, ", ")?;
             }
-            write!(f, "{:?}", iter.next().unwrap())?;
-            index += 1;
+            write!(f, "{}", iter.next().unwrap())?;
+            i += 1;
         }
         if self.can_be_end {
-            if index != 0usize {
+            if i != 0usize {
+                write!(f, ", ")?;
+            }
+            write!(f, "$")?;
+        }
+        write!(f, "}}")?;
+        Ok(())
+    }
+}
+
+impl<N, T> DisplayWith<Grammar<N, T>> for FollowSet
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
+        write!(f, "{{")?;
+        let mut i = 0usize;
+        let mut iter = self.terminals.iter();
+        while i < self.terminals.len() {
+            if i != 0usize {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", iter.next().unwrap().display_with(grammar))?;
+            i += 1;
+        }
+        if self.can_be_end {
+            if i != 0usize {
                 write!(f, ", ")?;
             }
             write!(f, "$")?;
@@ -200,117 +256,115 @@ impl<T: fmt::Debug> fmt::Display for FollowSet<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct FollowSets<N, T> {
-    pub sets: BTreeMap<N, FollowSet<T>>,
+pub struct FollowSets(Vec<FollowSet>);
+
+impl FollowSets {
+    pub fn follow_set_of_nonterminal(&self, nonterminal: NonterminalIndex) -> &FollowSet {
+        &self.0[nonterminal.value()]
+    }
+
+    fn follow_set_of_nonterminal_mut(&mut self, nonterminal: NonterminalIndex) -> &mut FollowSet {
+        &mut self.0[nonterminal.value()]
+    }
+
+    pub fn of_grammar<N, T>(grammar: &Grammar<N, T>, first_sets: &FirstSets) -> FollowSets
+    where
+        N: Ord + Copy,
+        T: Ord + Copy,
+    {
+        let mut sets = FollowSets(vec_with_size(
+            grammar.nonterminals_len(),
+            FollowSet {
+                terminals: BTreeSet::new(),
+                can_be_end: false,
+            },
+        ));
+        sets.follow_set_of_nonterminal_mut(grammar.start_index())
+            .can_be_end = true;
+        loop {
+            if !sets.iteration(grammar, first_sets) {
+                // if not changed
+                break
+            }
+        }
+        sets
+    }
+
+    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> bool {
+        let mut changed = false;
+        for Rule { left, right } in grammar.rules() {
+            for (index, symbol) in right.iter().enumerate() {
+                if let Symbol::Nonterminal(n) = symbol {
+                    let right_first = first_sets.first_set_of_symbol_string(&right[index + 1..]);
+                    // merge first
+                    changed |= self.merge_first_set_to_follow_set(*n, &right_first);
+                    if right_first.can_be_empty {
+                        changed |= self.merge_follow_set_to_follow_set(*n, *left);
+                    }
+                }
+            }
+        }
+        changed
+    }
+
+    fn merge_first_set_to_follow_set(&mut self, to: NonterminalIndex, from: &FirstSet) -> bool {
+        let mut from_set = from.terminals.clone();
+        let to_set = &mut self.follow_set_of_nonterminal_mut(to).terminals;
+        let length_before = to_set.len();
+        to_set.append(&mut from_set);
+        let length_after = to_set.len();
+        length_after != length_before
+    }
+
+    fn merge_follow_set_to_follow_set(
+        &mut self,
+        to: NonterminalIndex,
+        from: NonterminalIndex,
+    ) -> bool {
+        let mut from_set = self.follow_set_of_nonterminal(from).clone();
+        let to_set = self.follow_set_of_nonterminal_mut(to);
+        let length_before = to_set.terminals.len();
+        to_set.terminals.append(&mut from_set.terminals);
+        let length_after = to_set.terminals.len();
+
+        let mut changed = length_after != length_before;
+        if from_set.can_be_end {
+            if !to_set.can_be_end {
+                changed = true;
+            }
+            to_set.can_be_end = true;
+        }
+        changed
+    }
 }
 
-impl<T: fmt::Debug> fmt::Display for FollowSets<&'static str, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        for (nonterminal, follow_set) in &self.sets {
-            writeln!(f, "{}: {}", nonterminal, follow_set)?;
+impl<N, T> DisplayWith<Grammar<N, T>> for FollowSets
+where
+    N: fmt::Display,
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
+        for i in grammar.nonterminal_indices() {
+            if i.value() != 0 {
+                writeln!(f)?;
+            }
+            write!(f, "{}", i.display_with(grammar))?;
+            write!(f, ": ")?;
+            write!(
+                f,
+                "{}",
+                self.follow_set_of_nonterminal(i).display_with(grammar)
+            )?;
         }
         Ok(())
     }
 }
 
-pub fn follow_sets_of_grammar<N, T>(
-    grammar: &Grammar<N, T>,
-    first_sets: &FirstSets<N, T>,
-) -> FollowSets<N, T>
-where
-    N: Ord + Copy,
-    T: Ord + Copy,
-{
-    let mut sets = FollowSets {
-        sets: BTreeMap::new(),
-    };
-    for nonterminal in grammar.index.keys() {
-        sets.sets.insert(
-            nonterminal.clone(),
-            FollowSet {
-                terminals: BTreeSet::new(),
-                can_be_end: false,
-            },
-        );
-    }
-    sets.sets.get_mut(&grammar.start).unwrap().can_be_end = true;
-    loop {
-        if !follow_sets_iteration(&mut sets, grammar, first_sets) {
-            // if not changed
-            break
-        }
-    }
-    sets
-}
-
-fn follow_sets_iteration<N, T>(
-    follow_sets: &mut FollowSets<N, T>,
-    grammar: &Grammar<N, T>,
-    first_sets: &FirstSets<N, T>,
-) -> bool
-where
-    N: Ord + Copy,
-    T: Ord + Copy,
-{
-    let mut changed = false;
-    for Rule { left, right } in &grammar.rules {
-        for (index, symbol) in right.iter().enumerate() {
-            if let Symbol::Nonterminal(n) = symbol {
-                let right_first = first_set_of_symbol_string(first_sets, &right[index + 1..]);
-                // merge first
-                changed |= merge_first_to_follow_sets(follow_sets, n, &right_first);
-                if right_first.can_be_empty {
-                    changed |= merge_follow_to_follow_sets(follow_sets, n, left);
-                }
-            }
-        }
-    }
-    changed
-}
-
-fn merge_first_to_follow_sets<N, T>(
-    follow_sets: &mut FollowSets<N, T>,
-    to: &N,
-    from: &FirstSet<T>,
-) -> bool
-where
-    N: Ord,
-    T: Ord + Copy,
-{
-    let mut from_set = from.terminals.clone();
-    let to_set = &mut follow_sets.sets.get_mut(to).unwrap().terminals;
-    let length_before = to_set.len();
-    to_set.append(&mut from_set);
-    let length_after = to_set.len();
-    length_after != length_before
-}
-
-fn merge_follow_to_follow_sets<N, T>(follow_sets: &mut FollowSets<N, T>, to: &N, from: &N) -> bool
-where
-    N: Ord,
-    T: Ord + Copy,
-{
-    let mut from_set: FollowSet<T> = follow_sets.sets[from].clone();
-    let to_set = follow_sets.sets.get_mut(to).unwrap();
-    let length_before = to_set.terminals.len();
-    to_set.terminals.append(&mut from_set.terminals);
-    let length_after = to_set.terminals.len();
-
-    let mut changed = length_after != length_before;
-    if from_set.can_be_end {
-        if !to_set.can_be_end {
-            changed = true;
-        }
-        to_set.can_be_end = true;
-    }
-    changed
-}
-
 #[cfg(test)]
 mod test {
-    use super::first_sets_of_grammar;
-    use super::follow_sets_of_grammar;
-    use crate::{grammar, grammar_impl};
+    use super::FirstSets;
+    use super::FollowSets;
+    use crate::grammar;
     #[test]
     fn simple() {
         let grammar = grammar! {
@@ -318,12 +372,32 @@ mod test {
             rule A -> '(', A, ')', A;
             rule A -> ε;
         };
-        let first = first_sets_of_grammar(&grammar);
-        let follow = follow_sets_of_grammar(&grammar, &first);
+        let first_sets = FirstSets::of_grammar(&grammar);
+        let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
 
-        assert_eq!(first.sets["A"].terminals, vec!['('].into_iter().collect());
-        assert_eq!(first.sets["A"].can_be_empty, true);
-        assert_eq!(follow.sets["A"].terminals, vec![')'].into_iter().collect());
-        assert_eq!(follow.sets["A"].can_be_end, true);
+        assert_eq!(
+            first_sets
+                .first_set_of_nonterminal(grammar.nonterminal_index(&"A"))
+                .terminals,
+            vec![grammar.terminal_index(&'(')].into_iter().collect()
+        );
+        assert_eq!(
+            first_sets
+                .first_set_of_nonterminal(grammar.nonterminal_index(&"A"))
+                .can_be_empty,
+            true
+        );
+        assert_eq!(
+            follow_sets
+                .follow_set_of_nonterminal(grammar.nonterminal_index(&"A"))
+                .terminals,
+            vec![grammar.terminal_index(&')')].into_iter().collect()
+        );
+        assert_eq!(
+            follow_sets
+                .follow_set_of_nonterminal(grammar.nonterminal_index(&"A"))
+                .can_be_end,
+            true
+        );
     }
 }

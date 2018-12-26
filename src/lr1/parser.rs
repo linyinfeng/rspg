@@ -1,202 +1,217 @@
+use crate::display::DisplayWith;
 use crate::grammar::Grammar;
-use crate::grammar::Symbol;
-use crate::grammar::SymbolString;
+use crate::grammar::NonterminalIndex;
+use crate::grammar::RuleIndex;
+use crate::lr1::table::EndAction;
 use crate::lr1::table::Goto;
+use crate::lr1::table::State;
 use crate::lr1::table::{Action, Table};
-use crate::terminal::Terminal;
+use crate::token;
 use std::collections::VecDeque;
 use std::fmt;
-use std::marker::PhantomData;
+use std::iter::Peekable;
+use std::ops::Deref;
 
-#[derive(Debug)]
-enum SymbolStackItem<N, T> {
-    Symbol(Symbol<N, T>),
+#[derive(Debug, Clone)]
+pub enum NonterminalToken<Token> {
+    Nonterminal(NonterminalIndex),
+    Token(Token),
+}
+
+impl<N, T, Token> DisplayWith<Grammar<N, T>> for NonterminalToken<Token>
+where
+    N: fmt::Display,
+    Token: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
+        match self {
+            NonterminalToken::Nonterminal(n) => write!(f, "{}", n.display_with(grammar)),
+            NonterminalToken::Token(t) => write!(f, "{:?}", t),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+enum SymbolStackItem<Token> {
+    NonterminalToken(NonterminalToken<Token>),
     Initial,
 }
 
-#[derive(Debug)]
-struct StackItem<N, T> {
-    pub state: usize,
-    pub symbol: SymbolStackItem<N, T>,
+#[derive(Debug, Clone)]
+struct StackItem<Token> {
+    pub state: State,
+    pub symbol: SymbolStackItem<Token>,
 }
 
 // term for terminal, token for token
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Parser<'t, 'g, N, Term, Token, InputIter>
 where
     InputIter: Iterator<Item = Token>,
-    Term: Terminal<Token>,
+    Token: token::Token<Term>,
 {
     grammar: &'g Grammar<N, Term>,
-    table: &'t Table<N, Term>,
-    stack: Vec<StackItem<N, Token>>,
-    input: InputIter,
-    top: Top<Token>,
-    // limit input type
-    _phantom: PhantomData<Token>,
+    table: &'t Table,
+    stack: Vec<StackItem<Token>>,
+    input: Peekable<InputIter>,
 }
 
-#[derive(Debug)]
-enum Top<T> {
-    Begin,
-    Token(T),
-    End,
-}
-
-#[derive(Debug)]
-pub enum Event<N, T> {
-    Reduce(Reduce<N, T>),
+#[derive(Debug, Clone)]
+pub enum Event<Token> {
+    Reduce(Reduce<Token>),
     Accept,
     Error(Error),
 }
 
-#[derive(Debug)]
-pub struct Reduce<N, T> {
-    pub from: SymbolString<N, T>,
-    pub to: N,
+#[derive(Debug, Clone)]
+pub struct NonterminalTokenString<Token>(pub Vec<NonterminalToken<Token>>);
+
+impl<Token> From<Vec<NonterminalToken<Token>>> for NonterminalTokenString<Token> {
+    fn from(v: Vec<NonterminalToken<Token>>) -> Self {
+        NonterminalTokenString(v)
+    }
 }
 
-impl<T: fmt::Debug> fmt::Display for Reduce<&'static str, T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(f, "{} <- ", self.to)?;
-        if self.from.is_empty() {
-            write!(f, "ε;")?;
+impl<Token> Deref for NonterminalTokenString<Token> {
+    type Target = Vec<NonterminalToken<Token>>;
+
+    fn deref(&self) -> &<Self as Deref>::Target {
+        &self.0
+    }
+}
+
+impl<N, T, Token> DisplayWith<Grammar<N, T>> for NonterminalTokenString<Token>
+where
+    N: fmt::Display,
+    Token: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
+        if self.is_empty() {
+            write!(f, "ε")?;
         } else {
-            for index in 0..self.from.len() {
-                if index != 0 {
-                    write!(f, ", ")?;
+            for (i, symbol) in self.iter().enumerate() {
+                if i != 0 {
+                    write!(f, " ")?;
                 }
-                write!(f, "{}", self.from[index])?;
-                if index == self.from.len() - 1 {
-                    write!(f, ";")?;
-                }
+                write!(f, "{}", symbol.display_with(grammar))?;
             }
         }
         Ok(())
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct Reduce<Token> {
+    pub rule: RuleIndex,
+    pub from: NonterminalTokenString<Token>,
+    pub to: NonterminalIndex,
+}
+
+impl<N, T, Token> DisplayWith<Grammar<N, T>> for Reduce<Token>
+where
+    N: fmt::Display,
+    Token: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
+        write!(f, "{}", self.to.display_with(grammar))?;
+        write!(f, " <- ")?;
+        write!(f, "{}", self.from.display_with(grammar))?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Error {
-    NoAction,
-    NoGoto,
+    ErrorAction,
+    ErrorEndAction,
+    ErrorGoto,
 }
 
 impl<'t, 'g, N, Term, Token, InputIter> Parser<'t, 'g, N, Term, Token, InputIter>
 where
     N: Ord + Copy,
+    Term: Ord,
     InputIter: Iterator<Item = Token>,
-    Term: Terminal<Token>,
+    Token: token::Token<Term>,
 {
-    pub fn new(grammar: &'g Grammar<N, Term>, table: &'t Table<N, Term>, input: InputIter) -> Self {
+    pub fn new(grammar: &'g Grammar<N, Term>, table: &'t Table, input: InputIter) -> Self {
         Self {
             grammar,
             table,
             stack: vec![StackItem {
-                state: 0,
+                state: Table::start_state(),
                 symbol: SymbolStackItem::Initial,
             }],
-            input,
-            top: Top::Begin,
-            _phantom: std::marker::PhantomData,
+            input: input.peekable(),
         }
     }
 
-    pub fn next_event(&mut self) -> Event<N, Token> {
+    pub fn next_event(&mut self) -> Event<Token> {
         loop {
-            if let Top::Begin = self.top {
-                self.fetch_top();
-            }
-
             let &StackItem { state, .. } = self.stack.last().unwrap();
 
-            let action = match self.look_ahead() {
-                Some(token) => self.table.action(state, token),
-                None => self.table.end_action(state),
-            };
-
-            match action.unwrap() {
-                Action::Accept => return Event::Accept,
-                Action::Error => return Event::Error(Error::NoAction),
-                Action::Shift(state) => {
-                    let token = self.next_input().unwrap();
-                    self.stack.push(StackItem {
-                        state: *state,
-                        symbol: SymbolStackItem::Symbol(Symbol::Terminal(token)),
-                    });
-                },
-                Action::Reduce(rule_index) => {
-                    let rule = &self.grammar.rules[*rule_index];
-                    let length = rule.right.len();
-                    let reduce = Reduce {
-                        to: rule.left,
-                        from: {
-                            let mut queue = VecDeque::new();
-                            for _ in 0..length {
-                                match self.stack.pop().unwrap().symbol {
-                                    SymbolStackItem::Symbol(symbol) => queue.push_front(symbol),
-                                    SymbolStackItem::Initial => panic!("pop initial stack item"),
-                                }
-                            }
-                            queue.into_iter().collect()
+            match self.input.peek() {
+                Some(token) => {
+                    let terminal = self.grammar.terminal_index(&token.terminal());
+                    let action = Some(self.table.action(state, terminal));
+                    match action.expect("token can not match any terminals") {
+                        Action::Error => return Event::Error(Error::ErrorAction),
+                        Action::Shift(state) => {
+                            let token = self.input.next().unwrap();
+                            self.stack.push(StackItem {
+                                state,
+                                symbol: SymbolStackItem::NonterminalToken(NonterminalToken::Token(
+                                    token,
+                                )),
+                            });
                         },
-                    };
-                    let current_top_state = self.stack.last().unwrap().state;
-                    match self.table.goto(current_top_state, &rule.left).unwrap() {
-                        Goto::Goto(goto) => self.stack.push(StackItem {
-                            state: *goto,
-                            symbol: SymbolStackItem::Symbol(Symbol::Nonterminal(rule.left)),
-                        }),
-                        Goto::Error => return Event::Error(Error::NoGoto),
-                    };
-                    return Event::Reduce(reduce)
+                        Action::Reduce(rule) => match self.reduce(rule) {
+                            Ok(reduce) => return Event::Reduce(reduce),
+                            Err(e) => return Event::Error(e),
+                        },
+                    }
+                },
+                None => match self.table.end_action(state) {
+                    EndAction::Error => return Event::Error(Error::ErrorEndAction),
+                    EndAction::Accept => return Event::Accept,
+                    EndAction::Reduce(rule) => match self.reduce(rule) {
+                        Ok(reduce) => return Event::Reduce(reduce),
+                        Err(e) => return Event::Error(e),
+                    },
                 },
             }
         }
     }
 
-    fn next_input(&mut self) -> Option<Token> {
-        match &mut self.top {
-            Top::Begin => match self.input.next() {
-                None => {
-                    self.top = Top::End;
-                    None
-                },
-                Some(token) => {
-                    match self.input.next() {
-                        None => self.top = Top::End,
-                        Some(new_top) => self.top = Top::Token(new_top),
-                    };
-                    Some(token)
-                },
-            },
-            Top::End => None,
-            mut top => {
-                let mut new_top = match self.input.next() {
-                    None => Top::End,
-                    Some(t) => Top::Token(t),
-                };
-                std::mem::swap(&mut new_top, &mut top);
-                match new_top {
-                    Top::Token(t) => Some(t),
-                    _ => panic!(),
+    fn reduce(&mut self, rule_index: RuleIndex) -> Result<Reduce<Token>, Error> {
+        let rule = self.grammar.rule(rule_index);
+        let length = rule.right.len();
+        let reduce = Reduce {
+            rule: rule_index,
+            from: {
+                let mut queue = VecDeque::new();
+                for _ in 0..length {
+                    match self.stack.pop().unwrap().symbol {
+                        SymbolStackItem::NonterminalToken(symbol) => queue.push_front(symbol),
+                        SymbolStackItem::Initial => panic!("pop initial stack item"),
+                    }
                 }
+                NonterminalTokenString(queue.into_iter().collect())
             },
-        }
-    }
-
-    fn look_ahead(&self) -> Option<&Token> {
-        match &self.top {
-            Top::Token(token) => Some(&token),
-            Top::End => None,
-            _ => panic!("look ahead before fetch top"),
-        }
-    }
-
-    fn fetch_top(&mut self) {
-        match self.input.next() {
-            None => self.top = Top::End,
-            Some(token) => self.top = Top::Token(token),
+            to: rule.left,
+        };
+        let current_top_state = self.stack.last().unwrap().state;
+        match self.table.goto(current_top_state, rule.left) {
+            Goto::Goto(goto) => {
+                self.stack.push(StackItem {
+                    state: goto,
+                    symbol: SymbolStackItem::NonterminalToken(NonterminalToken::Nonterminal(
+                        rule.left,
+                    )),
+                });
+                Ok(reduce)
+            },
+            Goto::Error => Err(Error::ErrorGoto),
         }
     }
 }
