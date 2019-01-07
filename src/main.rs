@@ -1,11 +1,11 @@
-use parser_generator::display::DisplayWith;
-use parser_generator::grammar;
-use parser_generator::lr1::generator::Generator;
-use parser_generator::lr1::parser::Event;
-use parser_generator::lr1::Parser;
-use parser_generator::set::FirstSets;
-use parser_generator::set::FollowSets;
-use parser_generator::token;
+use simple_parser_generator::display::DisplayWith;
+use simple_parser_generator::grammar;
+use simple_parser_generator::lr1::generator::Generator;
+use simple_parser_generator::lr1::parser::Event;
+use simple_parser_generator::lr1::Parser;
+use simple_parser_generator::set::FirstSets;
+use simple_parser_generator::set::FollowSets;
+use simple_parser_generator::token;
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 enum Terminal {
