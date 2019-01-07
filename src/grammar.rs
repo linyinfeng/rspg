@@ -319,11 +319,7 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct GrammarBuilder<N, T>
-where
-    N: Ord,
-    T: Ord,
-{
+pub struct GrammarBuilder<N, T> {
     nonterminals: Vec<(N, Vec<RuleIndex>)>,
     terminals: Vec<T>,
     rules: Vec<Rule>,
