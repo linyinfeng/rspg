@@ -22,7 +22,11 @@ where
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         writeln!(f, "{{")?;
         for (lr0item, follow) in self.0.iter() {
-            writeln!(f, "    {},", ItemRef { lr0item, follow }.display_with(grammar))?;
+            writeln!(
+                f,
+                "    {},",
+                ItemRef { lr0item, follow }.display_with(grammar)
+            )?;
         }
         write!(f, "}}")?;
         Ok(())

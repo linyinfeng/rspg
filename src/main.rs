@@ -54,7 +54,8 @@ fn main() {
     let generator = Generator::construct(&grammar, &first_sets, new_start);
     for (i, item_set) in generator.canonical_collection().iter().enumerate() {
         println!(
-            "I_{} = {}", i,
+            "I_{} = {}",
+            i,
             item_set.display_with(generator.extended_grammar())
         );
     }
@@ -95,7 +96,9 @@ fn main() {
     let mut parser = Parser::new(&grammar, &table, input.iter());
     loop {
         match parser.next_event() {
-            Event::Reduce(r) => println!("use rule {} reduce: {}", r.rule, r.display_with(&grammar)),
+            Event::Reduce(r) => {
+                println!("use rule {} reduce: {}", r.rule, r.display_with(&grammar))
+            },
             Event::Accept => {
                 println!("accepted");
                 break

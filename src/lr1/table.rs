@@ -17,9 +17,9 @@ impl fmt::Display for State {
 
 #[derive(Debug)]
 pub struct Table {
-    action: Vec<Vec<Action>>,  // indexed with TerminalIndex and State
+    action: Vec<Vec<Action>>,   // indexed with TerminalIndex and State
     end_action: Vec<EndAction>, // indexed with State
-    goto: Vec<Vec<Goto>>, // indexed with NonterminalIndex and State
+    goto: Vec<Vec<Goto>>,       // indexed with NonterminalIndex and State
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
