@@ -1,5 +1,7 @@
 # Simple Parser Generator
 
+[![Build Status](https://travis-ci.org/linyinfeng/simple-parser-generator.svg?branch=master)](https://travis-ci.org/linyinfeng/simple-parser-generator)
+
 A simple rust parser generator library for syntactic analysis learning.
 
 ## Status
