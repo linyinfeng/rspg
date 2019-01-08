@@ -3,3 +3,10 @@ rust:
 - stable
 - beta
 - nightly
+
+after_success: |
+  cargo doc \
+  && echo '<html><head><meta http-equiv=refresh content=0;url={LIBRARY_NAME}/index.html /></head></html>' > target/doc/index.html && \
+  sudo pip install ghp-import && \
+  ghp-import -n target/doc && \
+  git push -qf https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
