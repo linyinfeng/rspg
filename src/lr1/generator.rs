@@ -43,7 +43,7 @@ where
         generator
     }
 
-    pub fn generate(&self, origin_grammar: &Grammar<N, T>, new_start: &N) -> Option<Table> {
+    pub fn generate(&self, origin_grammar: &Grammar<N, T>) -> Option<Table> {
         let mut table = Table::new(origin_grammar); // use original grammar (not extended one) to build table
         let states = {
             // states is indexed by ItemSetIndex
@@ -73,7 +73,7 @@ where
                 if follow.can_be_end {
                     if let EndAction::Error = table.end_action(*state) {
                         if self.extended_grammar.rule(lr0item.rule).left ==
-                            self.extended_grammar.nonterminal_index(new_start)
+                            self.extended_grammar.start_index()
                         {
                             *table.end_action_mut(*state) = EndAction::Accept;
                         } else {

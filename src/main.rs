@@ -61,7 +61,7 @@ fn main() {
     }
     println!();
 
-    let table = generator.generate(&grammar, &new_start).unwrap();
+    let table = generator.generate(&grammar).unwrap();
     println!("LR(1) table:");
     let pretty_table = table.pretty_table(&grammar, false);
     pretty_table.printstd();
