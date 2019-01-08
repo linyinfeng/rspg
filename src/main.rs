@@ -48,10 +48,8 @@ fn main() {
     let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
     println!("follow sets:\n{}\n", follow_sets.display_with(&grammar));
 
-    let new_start = "E'";
-    println!("new start for extending:\n{}\n", new_start);
     println!("LR(1) canonical collection:");
-    let generator = Generator::construct(&grammar, &first_sets, new_start);
+    let generator = Generator::construct(&grammar, &first_sets, "E'");
     for (i, item_set) in generator.canonical_collection().iter().enumerate() {
         println!(
             "I_{} = {}",
