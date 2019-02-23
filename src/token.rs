@@ -1,6 +1,6 @@
+use std::fmt;
 use std::ops::Deref;
 use std::ops::DerefMut;
-use std::fmt;
 
 /// map Token to terminal Terminal
 pub trait Token<Terminal> {
@@ -15,7 +15,6 @@ where
         (*self).terminal()
     }
 }
-
 
 /// a token type just map itself to terminal
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
@@ -36,7 +35,8 @@ impl<T> DerefMut for TerminalToken<T> {
 }
 
 impl<T> Token<T> for TerminalToken<T>
-where T: Copy,
+where
+    T: Copy,
 {
     fn terminal(&self) -> T {
         self.0
@@ -44,14 +44,18 @@ where T: Copy,
 }
 
 impl<T> fmt::Display for TerminalToken<T>
-where T: fmt::Display, {
+where
+    T: fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
 impl<T> fmt::Debug for TerminalToken<T>
-where T: fmt::Debug, {
+where
+    T: fmt::Debug,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.0)
     }
