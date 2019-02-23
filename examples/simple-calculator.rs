@@ -1,11 +1,11 @@
-use simple_parser_generator::display::DisplayWith;
-use simple_parser_generator::grammar;
-use simple_parser_generator::lr1::generator::Generator;
-use simple_parser_generator::lr1::parser::Event;
-use simple_parser_generator::lr1::Parser;
-use simple_parser_generator::set::FirstSets;
-use simple_parser_generator::set::FollowSets;
-use simple_parser_generator::token;
+use rspg::display::DisplayWith;
+use rspg::grammar;
+use rspg::lr1::generator::Generator;
+use rspg::lr1::parser::Event;
+use rspg::lr1::Parser;
+use rspg::set::FirstSets;
+use rspg::set::FollowSets;
+use rspg::token;
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 enum Terminal {

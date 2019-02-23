@@ -82,16 +82,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde"
-version = "1.0.88"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "simple-parser-generator"
+name = "rspg"
 version = "0.1.0"
 dependencies = [
  "prettytable-rs 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "serde"
+version = "1.0.88"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "term"

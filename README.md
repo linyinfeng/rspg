@@ -1,6 +1,6 @@
-# Simple Parser Generator
+# rspg - Rust Simple Parser Generator
 
-[![Build Status](https://travis-ci.org/linyinfeng/simple-parser-generator.svg?branch=master)](https://travis-ci.org/linyinfeng/simple-parser-generator)
+[![Build Status](https://travis-ci.com/linyinfeng/rspg.svg?branch=master)](https://travis-ci.com/linyinfeng/rspg)
 
 A simple rust parser generator library for syntactic analysis learning.
 

@@ -1,5 +1,5 @@
 [package]
-name = "simple-parser-generator"
+name = "rspg"
 version = "0.1.0"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
 edition = "2018"

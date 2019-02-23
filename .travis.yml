@@ -4,7 +4,7 @@ rust:
 
 after_success:
   - cargo doc
-  - echo '<html><head><meta http-equiv=refresh content=0;url=simple_parser_generator/index.html /></head></html>' > target/doc/index.html
+  - echo '<html><head><meta http-equiv=refresh content=0;url=rspg/index.html /></head></html>' > target/doc/index.html
 
 deploy:
   provider: pages
