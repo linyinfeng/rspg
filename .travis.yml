@@ -6,8 +6,9 @@ rust:
 - nightly
 
 after_success:
-  - cargo doc
-  - echo '<html><head><meta http-equiv=refresh content=0;url=rspg/index.html /></head></html>' > target/doc/index.html
+  - test $TRAVIS_BRANCH = "master" -a $TRAVIS_RUST_VERSION = "stable" &&
+    cargo doc &&
+    echo '<html><head><meta http-equiv=refresh content=0;url=rspg/index.html /></head></html>' > target/doc/index.html
 
 deploy:
   provider: pages
