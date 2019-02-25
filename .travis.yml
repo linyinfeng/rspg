@@ -2,6 +2,8 @@ language: rust
 cache: cargo
 rust:
 - stable
+- beta
+- nightly
 
 after_success:
   - cargo doc
