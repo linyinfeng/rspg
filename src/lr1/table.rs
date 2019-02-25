@@ -133,7 +133,7 @@ impl Default for Goto {
 }
 
 impl Table {
-    /// create an empty(no state) table
+    /// Create an empty(no state) table.
     pub fn new<N, T>(grammar: &Grammar<N, T>) -> Table {
         Table {
             action: vec_with_size(grammar.terminals_len(), Vec::new()),
