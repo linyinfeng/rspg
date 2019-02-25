@@ -1,4 +1,10 @@
+//! A simple **experimental** rust parser generator library for syntactic
+//! analysis learning.
+//!
 //! # Example
+//!
+//! Here is a example shows a LR(1) analysis process on a simple grammar.
+//!
 //! ```
 //! use rspg::token;
 //! use rspg::grammar;
