@@ -2,7 +2,7 @@ use rspg::display::DisplayWith;
 use rspg::grammar;
 use rspg::lr1::generator::Generator;
 use rspg::lr1::parser::Event;
-use rspg::lr1::Parser;
+use rspg::lr1::parser::Parser;
 use rspg::set::FirstSets;
 use rspg::set::FollowSets;
 use rspg::token;

@@ -8,7 +8,7 @@ use crate::lr1::item::ItemSet;
 use crate::lr1::table::Action;
 use crate::lr1::table::EndAction;
 use crate::lr1::table::Goto;
-use crate::lr1::Table;
+use crate::lr1::table::Table;
 use crate::set::FirstSets;
 use crate::set::FollowSet;
 use std::collections::btree_map::Entry;

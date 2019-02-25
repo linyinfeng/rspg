@@ -6,6 +6,9 @@ use crate::utility::vec_with_size;
 use std::collections::BTreeSet;
 use std::fmt;
 
+/// A struct describing a FIRST set of something.
+///
+/// A FIRST set contains a set of terminals and ε.
 #[derive(Debug, Clone)]
 pub struct FirstSet {
     pub terminals: BTreeSet<TerminalIndex>,
@@ -61,18 +64,24 @@ where
     }
 }
 
+/// A struct describing the FIRST sets of every non-terminals of a grammar.
 #[derive(Debug, Clone)]
 pub struct FirstSets(Vec<FirstSet>);
 
 impl FirstSets {
+    /// Given `NonterminalIndex`, return a reference of the particular FIRST
+    /// set.
     pub fn first_set_of_nonterminal(&self, nonterminal: NonterminalIndex) -> &FirstSet {
         &self.0[nonterminal.value()]
     }
 
-    fn first_set_of_nonterminal_mut(&mut self, nonterminal: NonterminalIndex) -> &mut FirstSet {
+    /// Given `NonterminalIndex`, return a mutable reference of the particular
+    /// FIRST set.
+    pub fn first_set_of_nonterminal_mut(&mut self, nonterminal: NonterminalIndex) -> &mut FirstSet {
         &mut self.0[nonterminal.value()]
     }
 
+    /// Given a symbol string, return its FIRST set.
     pub fn first_set_of_symbol_string(&self, symbol_string: &[Symbol]) -> FirstSet {
         let mut first_set = FirstSet {
             terminals: BTreeSet::new(),
@@ -101,7 +110,10 @@ impl FirstSets {
         }
         first_set
     }
+}
 
+impl FirstSets {
+    /// Calculate the FIRST sets of every non-terminals of the `grammar`.
     pub fn of_grammar<N, T>(grammar: &Grammar<N, T>) -> FirstSets {
         let mut sets = FirstSets(vec_with_size(
             grammar.nonterminals_len(),
@@ -200,6 +212,9 @@ where
     }
 }
 
+/// A struct describing a FOLLOW set of something.
+///
+/// A FOLLOW set contains a set of terminals and $.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone)]
 pub struct FollowSet {
     pub terminals: BTreeSet<TerminalIndex>,
@@ -255,18 +270,29 @@ where
     }
 }
 
+/// A struct describing the FOLLOW sets of every non-terminals of a grammar.
 #[derive(Debug, Clone)]
 pub struct FollowSets(Vec<FollowSet>);
 
 impl FollowSets {
+    /// Given `NonterminalIndex`, return a reference of the particular FOLLOW
+    /// set.
     pub fn follow_set_of_nonterminal(&self, nonterminal: NonterminalIndex) -> &FollowSet {
         &self.0[nonterminal.value()]
     }
 
-    fn follow_set_of_nonterminal_mut(&mut self, nonterminal: NonterminalIndex) -> &mut FollowSet {
+    /// Given `NonterminalIndex`, return a mutable reference of the particular
+    /// FOLLOW set.
+    pub fn follow_set_of_nonterminal_mut(
+        &mut self,
+        nonterminal: NonterminalIndex,
+    ) -> &mut FollowSet {
         &mut self.0[nonterminal.value()]
     }
+}
 
+impl FollowSets {
+    /// Calculate the FOLLOW sets of every non-terminals of the `grammar`.
     pub fn of_grammar<N, T>(grammar: &Grammar<N, T>, first_sets: &FirstSets) -> FollowSets
     where
         N: Ord + Copy,
@@ -365,8 +391,44 @@ mod test {
     use super::FirstSets;
     use super::FollowSets;
     use crate::grammar;
+
     #[test]
-    fn simple() {
+    fn empty_grammar() {
+        let grammar = grammar! {
+            start A;
+            rule A -> 'a';
+        };
+        let first_sets = FirstSets::of_grammar(&grammar);
+        let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
+
+        assert_eq!(
+            first_sets
+                .first_set_of_nonterminal(grammar.nonterminal_index(&"A"))
+                .terminals,
+            [grammar.terminal_index(&'a')].iter().cloned().collect()
+        );
+        assert_eq!(
+            first_sets
+                .first_set_of_nonterminal(grammar.nonterminal_index(&"A"))
+                .can_be_empty,
+            false
+        );
+        assert_eq!(
+            follow_sets
+                .follow_set_of_nonterminal(grammar.nonterminal_index(&"A"))
+                .terminals,
+            [].iter().cloned().collect()
+        );
+        assert_eq!(
+            follow_sets
+                .follow_set_of_nonterminal(grammar.nonterminal_index(&"A"))
+                .can_be_end,
+            true
+        );
+    }
+
+    #[test]
+    fn simple_grammar() {
         let grammar = grammar! {
             start A;
             rule A -> '(', A, ')', A;
