@@ -1,4 +1,4 @@
-/// create a Vec with size and all element in the Vec is the clone of item
+/// Create a Vec with size and all element in the Vec is the clone of item.
 pub fn vec_with_size<T>(size: usize, item: T) -> Vec<T>
 where
     T: Clone,
