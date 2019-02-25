@@ -2,23 +2,27 @@ use std::fmt;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-/// map Token to terminal Terminal
+/// `Token<Terminal>` is a trait. Types which implement `Token<Terminal>`
+/// implement function `Token<Terminal>::terminal` which return the associated
+/// terminal of the token.
 pub trait Token<Terminal> {
     fn terminal(&self) -> Terminal;
 }
 
+/// Implements all reference to a `Token<Terminal>` as `Token<Terminal>`.
 impl<Terminal, T> Token<Terminal> for &T
 where
     T: Token<Terminal>,
 {
+    /// Deref and call `Token<Terminal>::terminal`.
     fn terminal(&self) -> Terminal {
         (*self).terminal()
     }
 }
 
-/// a token type just map itself to terminal
+/// A token type whose terminal type is itself.
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
-pub struct TerminalToken<T>(T);
+pub struct TerminalToken<T>(pub T);
 
 impl<T> Deref for TerminalToken<T> {
     type Target = T;
@@ -62,6 +66,7 @@ where
 }
 
 impl<T> TerminalToken<T> {
+    /// Create a new `TerminalToken<T>` from `T`.
     pub fn new(t: T) -> Self {
         TerminalToken(t)
     }
