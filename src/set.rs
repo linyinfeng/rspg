@@ -391,6 +391,48 @@ mod test {
     use super::FirstSets;
     use super::FollowSets;
     use crate::grammar;
+    use crate::grammar::Grammar;
+
+    fn assert_first_set<N, T>(
+        first_sets: &FirstSets,
+        grammar: &Grammar<N, T>,
+        nonterminal: &N,
+        terminals: &[T],
+        can_be_empty: bool,
+    ) where
+        N: std::cmp::Ord,
+        T: std::cmp::Ord,
+    {
+        let set = first_sets.first_set_of_nonterminal(grammar.nonterminal_index(nonterminal));
+        assert_eq!(
+            set.terminals,
+            terminals
+                .iter()
+                .map(|t| grammar.terminal_index(t))
+                .collect()
+        );
+        assert_eq!(set.can_be_empty, can_be_empty);
+    }
+    fn assert_follow_set<N, T>(
+        follow_set: &FollowSets,
+        grammar: &Grammar<N, T>,
+        nonterminal: &N,
+        terminals: &[T],
+        can_be_end: bool,
+    ) where
+        N: std::cmp::Ord,
+        T: std::cmp::Ord,
+    {
+        let set = follow_set.follow_set_of_nonterminal(grammar.nonterminal_index(nonterminal));
+        assert_eq!(
+            set.terminals,
+            terminals
+                .iter()
+                .map(|t| grammar.terminal_index(t))
+                .collect()
+        );
+        assert_eq!(set.can_be_end, can_be_end);
+    }
 
     #[test]
     fn empty_grammar() {
@@ -401,30 +443,8 @@ mod test {
         let first_sets = FirstSets::of_grammar(&grammar);
         let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
 
-        assert_eq!(
-            first_sets
-                .first_set_of_nonterminal(grammar.nonterminal_index(&"A"))
-                .terminals,
-            [grammar.terminal_index(&'a')].iter().cloned().collect()
-        );
-        assert_eq!(
-            first_sets
-                .first_set_of_nonterminal(grammar.nonterminal_index(&"A"))
-                .can_be_empty,
-            false
-        );
-        assert_eq!(
-            follow_sets
-                .follow_set_of_nonterminal(grammar.nonterminal_index(&"A"))
-                .terminals,
-            [].iter().cloned().collect()
-        );
-        assert_eq!(
-            follow_sets
-                .follow_set_of_nonterminal(grammar.nonterminal_index(&"A"))
-                .can_be_end,
-            true
-        );
+        assert_first_set(&first_sets, &grammar, &"A", &['a'], false);
+        assert_follow_set(&follow_sets, &grammar, &"A", &[], true);
     }
 
     #[test]
@@ -437,29 +457,36 @@ mod test {
         let first_sets = FirstSets::of_grammar(&grammar);
         let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
 
-        assert_eq!(
-            first_sets
-                .first_set_of_nonterminal(grammar.nonterminal_index(&"A"))
-                .terminals,
-            vec![grammar.terminal_index(&'(')].into_iter().collect()
-        );
-        assert_eq!(
-            first_sets
-                .first_set_of_nonterminal(grammar.nonterminal_index(&"A"))
-                .can_be_empty,
-            true
-        );
-        assert_eq!(
-            follow_sets
-                .follow_set_of_nonterminal(grammar.nonterminal_index(&"A"))
-                .terminals,
-            vec![grammar.terminal_index(&')')].into_iter().collect()
-        );
-        assert_eq!(
-            follow_sets
-                .follow_set_of_nonterminal(grammar.nonterminal_index(&"A"))
-                .can_be_end,
-            true
-        );
+        assert_first_set(&first_sets, &grammar, &"A", &['('], true);
+        assert_follow_set(&follow_sets, &grammar, &"A", &[')'], true);
+    }
+
+    #[test]
+    fn example_grammar() {
+        let grammar = grammar! {
+            start E;
+            rule E -> T, E1;
+            rule E1 -> "+", T, E1;
+            rule E1 -> ε;
+            rule T -> F, T1;
+            rule T1 -> "*", F, T1;
+            rule T1 -> ε;
+            rule F -> "(", E, ")";
+            rule F -> "id";
+        };
+        let first_sets = FirstSets::of_grammar(&grammar);
+        let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
+
+        assert_first_set(&first_sets, &grammar, &"E", &["(", "id"], false);
+        assert_first_set(&first_sets, &grammar, &"E1", &["+"], true);
+        assert_first_set(&first_sets, &grammar, &"T", &["(", "id"], false);
+        assert_first_set(&first_sets, &grammar, &"T1", &["*"], true);
+        assert_first_set(&first_sets, &grammar, &"F", &["(", "id"], false);
+
+        assert_follow_set(&follow_sets, &grammar, &"E", &[")"], true);
+        assert_follow_set(&follow_sets, &grammar, &"E1", &[")"], true);
+        assert_follow_set(&follow_sets, &grammar, &"T", &["+", ")"], true);
+        assert_follow_set(&follow_sets, &grammar, &"T1", &["+", ")"], true);
+        assert_follow_set(&follow_sets, &grammar, &"F", &["+", "*", ")"], true);
     }
 }
