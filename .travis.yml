@@ -10,6 +10,19 @@ rust:
 - beta
 - nightly
 
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+
+before_script:
+  - test $TRAVIS_RUST_VERSION != "nightly" || rustup component add rustfmt
+
+script:
+  - test $TRAVIS_RUST_VERSION != "nightly" || cargo fmt -- --check
+  - cargo build --verbose
+  - cargo test --verbose
+
 after_success:
   - test $TRAVIS_BRANCH = "master" -a $TRAVIS_RUST_VERSION = "stable" &&
     cargo doc &&
