@@ -309,9 +309,9 @@ where
         writeln!(f, "grammar {{")?;
         write!(f, "    start ")?;
         writeln!(f, "{}", self.start.display_with(self))?;
-        for (i, rule) in self.rules.iter().enumerate() {
+        for i in self.rule_indices() {
             write!(f, "    rule {}: ", i)?;
-            writeln!(f, "{}", rule.display_with(self))?;
+            writeln!(f, "{}", self.rule(i).display_with(self))?;
         }
         write!(f, "}}")?;
         Ok(())
