@@ -497,6 +497,22 @@ mod test {
     }
 
     #[test]
+    fn first_sets_before_can_be_empty() {
+        let grammar = grammar! {
+            start S;
+            rule S -> A, B;
+            rule A -> 'a';
+            rule A -> ε;
+            rule B -> 'b';
+            rule B -> ε;
+        };
+        let first_sets = FirstSets::of_grammar(&grammar);
+        assert_first_set(&first_sets, &grammar, &"S", &['a', 'b'], true);
+        assert_first_set(&first_sets, &grammar, &"A", &['a'], true);
+        assert_first_set(&first_sets, &grammar, &"B", &['b'], true);
+    }
+
+    #[test]
     fn display_first_sets_with_grammar() {
         let grammar = example_grammar();
         let first_sets = FirstSets::of_grammar(&grammar);
