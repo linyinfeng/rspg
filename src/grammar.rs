@@ -460,6 +460,7 @@ mod tests {
             rule T1 -> ε;
             rule F -> "(", E, ")";
             rule F -> "id";
+            rule F -> "(", ")";
         }
     }
 
@@ -470,7 +471,7 @@ mod tests {
         assert_eq!(grammar.start_index(), grammar.nonterminal_index(&"E"));
         assert_eq!(grammar.nonterminals_len(), 5);
         assert_eq!(grammar.terminals_len(), 5);
-        assert_eq!(grammar.rules_len(), 8);
+        assert_eq!(grammar.rules_len(), 9);
         assert_eq!(
             grammar.nonterminals().collect::<Vec<_>>(),
             &[&"E", &"T", &"E1", &"F", &"T1"]
@@ -494,6 +495,7 @@ mod tests {
                 r#"T1 -> ε"#,
                 r#"F -> "(" E ")""#,
                 r#"F -> "id""#,
+                r#"F -> "(" ")""#,
             ]
         );
         assert_eq!(
@@ -534,7 +536,7 @@ mod tests {
                 .map(|r| r.display_with(&grammar))
                 .map(|mix| mix.to_string())
                 .collect::<Vec<_>>(),
-            &[r#"F -> "(" E ")""#, r#"F -> "id""#,]
+            &[r#"F -> "(" E ")""#, r#"F -> "id""#, r#"F -> "(" ")""#,]
         );
         assert!(grammar
             .nonterminals()
@@ -577,6 +579,7 @@ grammar {
     rule 5: T1 -> ε
     rule 6: F -> "(" E ")"
     rule 7: F -> "id"
+    rule 8: F -> "(" ")"
 }
 "#
         );
@@ -596,6 +599,7 @@ grammar {
                 "N4 -> ε",
                 "N3 -> t2 N0 t3",
                 "N3 -> t4",
+                "N3 -> t2 t3",
             ]
         );
     }
@@ -622,7 +626,8 @@ grammar {
     rule 5: T1 -> ε
     rule 6: F -> "(" E ")"
     rule 7: F -> "id"
-    rule 8: E' -> E
+    rule 8: F -> "(" ")"
+    rule 9: E' -> E
 }
 "#
         );
