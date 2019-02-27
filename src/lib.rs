@@ -6,14 +6,14 @@
 //! Here is a example shows a LR(1) analysis process on a simple grammar.
 //!
 //! ```
-//! use rspg::token;
+//! use rspg::display::DisplayWith;
 //! use rspg::grammar;
+//! use rspg::lr1::generator::Generator;
+//! use rspg::lr1::parser::Event;
+//! use rspg::lr1::parser::Parser;
 //! use rspg::set::FirstSets;
 //! use rspg::set::FollowSets;
-//! use rspg::lr1::generator::Generator;
-//! use rspg::lr1::parser::Parser;
-//! use rspg::lr1::parser::Event;
-//! use rspg::display::DisplayWith;
+//! use rspg::token;
 //!
 //! // define terminal type
 //! #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
@@ -70,11 +70,7 @@
 //!     // construct the parser generator, which create the LR(1) canonical collection of the grammar
 //!     let generator = Generator::construct(&grammar, &first_sets, new_start);
 //!     for (i, item_set) in generator.canonical_collection().iter().enumerate() {
-//!         println!(
-//!             "I_{} = {}",
-//!             i,
-//!             item_set.display_with(generator.extended_grammar())
-//!         );
+//!         println!("I_{} = {}", i, item_set.display_with(generator.extended_grammar()));
 //!     }
 //!     println!();
 //!
@@ -107,9 +103,7 @@
 //!     let mut parser = Parser::new(&grammar, &table, input.iter());
 //!     loop {
 //!         match parser.next_event() {
-//!             Event::Reduce(r) => {
-//!                 println!("use rule {} reduce: {}", r.rule, r.display_with(&grammar))
-//!             },
+//!             Event::Reduce(r) => println!("use rule {} reduce: {}", r.rule, r.display_with(&grammar)),
 //!             Event::Accept => {
 //!                 println!("accepted");
 //!                 break

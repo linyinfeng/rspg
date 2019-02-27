@@ -390,6 +390,7 @@ where
 mod test {
     use super::FirstSets;
     use super::FollowSets;
+    use crate::display::DisplayWith;
     use crate::grammar;
     use crate::grammar::Grammar;
 
@@ -413,6 +414,7 @@ mod test {
         );
         assert_eq!(set.can_be_empty, can_be_empty);
     }
+
     fn assert_follow_set<N, T>(
         follow_set: &FollowSets,
         grammar: &Grammar<N, T>,
@@ -434,8 +436,22 @@ mod test {
         assert_eq!(set.can_be_end, can_be_end);
     }
 
+    fn example_grammar() -> Grammar<&'static str, &'static str> {
+        grammar! {
+            start E;
+            rule E -> T, E1;
+            rule E1 -> "+", T, E1;
+            rule E1 -> ε;
+            rule T -> F, T1;
+            rule T1 -> "*", F, T1;
+            rule T1 -> ε;
+            rule F -> "(", E, ")";
+            rule F -> "id";
+        }
+    }
+
     #[test]
-    fn empty_grammar() {
+    fn sets_of_empty_grammar() {
         let grammar = grammar! {
             start A;
             rule A -> 'a';
@@ -448,7 +464,7 @@ mod test {
     }
 
     #[test]
-    fn simple_grammar() {
+    fn sets_of_simple_grammar() {
         let grammar = grammar! {
             start A;
             rule A -> '(', A, ')', A;
@@ -462,18 +478,8 @@ mod test {
     }
 
     #[test]
-    fn example_grammar() {
-        let grammar = grammar! {
-            start E;
-            rule E -> T, E1;
-            rule E1 -> "+", T, E1;
-            rule E1 -> ε;
-            rule T -> F, T1;
-            rule T1 -> "*", F, T1;
-            rule T1 -> ε;
-            rule F -> "(", E, ")";
-            rule F -> "id";
-        };
+    fn sets_of_example_grammar() {
+        let grammar = example_grammar();
         let first_sets = FirstSets::of_grammar(&grammar);
         let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
 
@@ -488,5 +494,137 @@ mod test {
         assert_follow_set(&follow_sets, &grammar, &"T", &["+", ")"], true);
         assert_follow_set(&follow_sets, &grammar, &"T1", &["+", ")"], true);
         assert_follow_set(&follow_sets, &grammar, &"F", &["+", "*", ")"], true);
+    }
+
+    #[test]
+    fn first_sets_before_can_be_empty() {
+        let grammar = grammar! {
+            start S;
+            rule S -> A, B;
+            rule A -> 'a';
+            rule A -> ε;
+            rule B -> 'b';
+            rule B -> ε;
+        };
+        let first_sets = FirstSets::of_grammar(&grammar);
+        assert_first_set(&first_sets, &grammar, &"S", &['a', 'b'], true);
+        assert_first_set(&first_sets, &grammar, &"A", &['a'], true);
+        assert_first_set(&first_sets, &grammar, &"B", &['b'], true);
+    }
+
+    #[test]
+    fn display_first_sets_with_grammar() {
+        let grammar = example_grammar();
+        let first_sets = FirstSets::of_grammar(&grammar);
+        assert_eq!(
+            format!("\n{}\n", first_sets.display_with(&grammar)),
+            r#"
+E: {"(", "id"}
+T: {"(", "id"}
+E1: {"+", ε}
+F: {"(", "id"}
+T1: {"*", ε}
+"#
+        );
+    }
+
+    #[test]
+    fn display_follow_sets_with_grammar() {
+        let grammar = example_grammar();
+        let first_sets = FirstSets::of_grammar(&grammar);
+        let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
+        assert_eq!(
+            format!("\n{}\n", follow_sets.display_with(&grammar)),
+            r#"
+E: {")", $}
+T: {"+", ")", $}
+E1: {")", $}
+F: {"+", "*", ")", $}
+T1: {"+", ")", $}
+"#
+        );
+    }
+
+    #[test]
+    fn display_first_set() {
+        let grammar = example_grammar();
+        let first_sets = FirstSets::of_grammar(&grammar);
+        assert_eq!(
+            format!(
+                "{}",
+                first_sets.first_set_of_nonterminal(grammar.nonterminal_index(&"E"))
+            ),
+            "{t2, t4}"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                first_sets.first_set_of_nonterminal(grammar.nonterminal_index(&"T"))
+            ),
+            "{t2, t4}"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                first_sets.first_set_of_nonterminal(grammar.nonterminal_index(&"E1"))
+            ),
+            "{t0, ε}"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                first_sets.first_set_of_nonterminal(grammar.nonterminal_index(&"F"))
+            ),
+            "{t2, t4}"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                first_sets.first_set_of_nonterminal(grammar.nonterminal_index(&"T1"))
+            ),
+            "{t1, ε}"
+        );
+    }
+
+    #[test]
+    fn display_follow_set() {
+        let grammar = example_grammar();
+        let first_sets = FirstSets::of_grammar(&grammar);
+        let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
+        assert_eq!(
+            format!(
+                "{}",
+                follow_sets.follow_set_of_nonterminal(grammar.nonterminal_index(&"E"))
+            ),
+            "{t3, $}"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                follow_sets.follow_set_of_nonterminal(grammar.nonterminal_index(&"T"))
+            ),
+            "{t0, t3, $}"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                follow_sets.follow_set_of_nonterminal(grammar.nonterminal_index(&"E1"))
+            ),
+            "{t3, $}"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                follow_sets.follow_set_of_nonterminal(grammar.nonterminal_index(&"F"))
+            ),
+            "{t0, t1, t3, $}"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                follow_sets.follow_set_of_nonterminal(grammar.nonterminal_index(&"T1"))
+            ),
+            "{t0, t3, $}"
+        );
     }
 }

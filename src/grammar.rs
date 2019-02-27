@@ -309,9 +309,9 @@ where
         writeln!(f, "grammar {{")?;
         write!(f, "    start ")?;
         writeln!(f, "{}", self.start.display_with(self))?;
-        for (i, rule) in self.rules.iter().enumerate() {
+        for i in self.rule_indices() {
             write!(f, "    rule {}: ", i)?;
-            writeln!(f, "{}", rule.display_with(self))?;
+            writeln!(f, "{}", self.rule(i).display_with(self))?;
         }
         write!(f, "}}")?;
         Ok(())
@@ -334,14 +334,7 @@ where
     T: Ord,
 {
     pub fn new() -> Self {
-        Self {
-            nonterminals: Vec::new(),
-            terminals: Vec::new(),
-            rules: Vec::new(),
-            start: None,
-            nonterminal_index: BTreeMap::new(),
-            terminal_index: BTreeMap::new(),
-        }
+        Default::default()
     }
 }
 
@@ -351,7 +344,14 @@ where
     T: Ord,
 {
     fn default() -> Self {
-        Self::new()
+        Self {
+            nonterminals: Vec::new(),
+            terminals: Vec::new(),
+            rules: Vec::new(),
+            start: None,
+            nonterminal_index: BTreeMap::new(),
+            terminal_index: BTreeMap::new(),
+        }
     }
 }
 
@@ -439,5 +439,207 @@ where
             nonterminal_index: self.nonterminal_index,
             terminal_index: self.terminal_index,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::display::DisplayWith;
+    use crate::grammar;
+    use crate::grammar::Grammar;
+    use crate::grammar::GrammarBuilder;
+
+    fn example_grammar() -> Grammar<&'static str, &'static str> {
+        grammar! {
+            start E;
+            rule E -> T, E1;
+            rule E1 -> "+", T, E1;
+            rule E1 -> ε;
+            rule T -> F, T1;
+            rule T1 -> "*", F, T1;
+            rule T1 -> ε;
+            rule F -> "(", E, ")";
+            rule F -> "id";
+            rule F -> "(", ")";
+        }
+    }
+
+    #[test]
+    fn grammar_builder() {
+        let grammar = example_grammar();
+        assert_eq!(grammar.start(), &"E");
+        assert_eq!(grammar.start_index(), grammar.nonterminal_index(&"E"));
+        assert_eq!(grammar.nonterminals_len(), 5);
+        assert_eq!(grammar.terminals_len(), 5);
+        assert_eq!(grammar.rules_len(), 9);
+        assert_eq!(
+            grammar.nonterminals().collect::<Vec<_>>(),
+            &[&"E", &"T", &"E1", &"F", &"T1"]
+        );
+        assert_eq!(
+            grammar.terminals().collect::<Vec<_>>(),
+            &[&"+", &"*", &"(", &")", &"id"]
+        );
+        assert!(grammar
+            .nonterminals()
+            .all(|n| grammar.contains_nonterminal(n)));
+        assert!(["A", "B", "C"]
+            .iter()
+            .all(|n| !grammar.contains_nonterminal(n)));
+        assert!(grammar.terminals().all(|n| grammar.contains_terminal(n)));
+        assert!(["a", "b", "c"]
+            .iter()
+            .all(|n| !grammar.contains_terminal(n)));
+        assert_eq!(
+            grammar
+                .rules()
+                .map(|r| r.display_with(&grammar))
+                .map(|mix| mix.to_string())
+                .collect::<Vec<_>>(),
+            &[
+                r#"E -> T E1"#,
+                r#"E1 -> "+" T E1"#,
+                r#"E1 -> ε"#,
+                r#"T -> F T1"#,
+                r#"T1 -> "*" F T1"#,
+                r#"T1 -> ε"#,
+                r#"F -> "(" E ")""#,
+                r#"F -> "id""#,
+                r#"F -> "(" ")""#,
+            ]
+        );
+        assert_eq!(
+            grammar
+                .rules_with_left(grammar.nonterminal_index(&"E"))
+                .map(|r| r.display_with(&grammar))
+                .map(|mix| mix.to_string())
+                .collect::<Vec<_>>(),
+            &[r#"E -> T E1"#,]
+        );
+        assert_eq!(
+            grammar
+                .rules_with_left(grammar.nonterminal_index(&"E1"))
+                .map(|r| r.display_with(&grammar))
+                .map(|mix| mix.to_string())
+                .collect::<Vec<_>>(),
+            &[r#"E1 -> "+" T E1"#, r#"E1 -> ε"#,]
+        );
+        assert_eq!(
+            grammar
+                .rules_with_left(grammar.nonterminal_index(&"T"))
+                .map(|r| r.display_with(&grammar))
+                .map(|mix| mix.to_string())
+                .collect::<Vec<_>>(),
+            &[r#"T -> F T1"#,]
+        );
+        assert_eq!(
+            grammar
+                .rules_with_left(grammar.nonterminal_index(&"T1"))
+                .map(|r| r.display_with(&grammar))
+                .map(|mix| mix.to_string())
+                .collect::<Vec<_>>(),
+            &[r#"T1 -> "*" F T1"#, r#"T1 -> ε"#,]
+        );
+        assert_eq!(
+            grammar
+                .rules_with_left(grammar.nonterminal_index(&"F"))
+                .map(|r| r.display_with(&grammar))
+                .map(|mix| mix.to_string())
+                .collect::<Vec<_>>(),
+            &[r#"F -> "(" E ")""#, r#"F -> "id""#, r#"F -> "(" ")""#,]
+        );
+        assert!(grammar
+            .nonterminals()
+            .map(|n| (grammar.nonterminal_index(n), n))
+            .all(|(i, n)| grammar.nonterminal(i) == n));
+        assert!(grammar
+            .terminals()
+            .map(|t| (grammar.terminal_index(t), t))
+            .all(|(i, t)| grammar.terminal(i) == t));
+        assert!(grammar
+            .rule_indices()
+            .map(|i| grammar.rule(i))
+            .zip(grammar.rules())
+            .all(|(r1, r2)| r1 == r2));
+        assert!(grammar
+            .nonterminal_indices()
+            .map(|i| grammar.nonterminal(i))
+            .zip(grammar.nonterminals())
+            .all(|(n1, n2)| n1 == n2));
+        assert!(grammar
+            .terminal_indices()
+            .map(|i| grammar.terminal(i))
+            .zip(grammar.terminals())
+            .all(|(t1, t2)| t1 == t2));
+    }
+
+    #[test]
+    fn display_grammar() {
+        let grammar = example_grammar();
+        assert_eq!(
+            format!("\n{}\n", grammar),
+            r#"
+grammar {
+    start E
+    rule 0: E -> T E1
+    rule 1: E1 -> "+" T E1
+    rule 2: E1 -> ε
+    rule 3: T -> F T1
+    rule 4: T1 -> "*" F T1
+    rule 5: T1 -> ε
+    rule 6: F -> "(" E ")"
+    rule 7: F -> "id"
+    rule 8: F -> "(" ")"
+}
+"#
+        );
+    }
+
+    #[test]
+    fn display_rule() {
+        let grammar = example_grammar();
+        assert_eq!(
+            grammar.rules().map(ToString::to_string).collect::<Vec<_>>(),
+            &[
+                "N0 -> N1 N2",
+                "N2 -> t0 N1 N2",
+                "N2 -> ε",
+                "N1 -> N3 N4",
+                "N4 -> t1 N3 N4",
+                "N4 -> ε",
+                "N3 -> t2 N0 t3",
+                "N3 -> t4",
+                "N3 -> t2 t3",
+            ]
+        );
+    }
+
+    #[test]
+    fn extend_grammar() {
+        let builder = GrammarBuilder::from_grammar(example_grammar());
+        // extend grammar
+        let grammar = builder
+            .push_rule_left("E'")
+            .push_rule_right_nonterminal("E")
+            .start("E'")
+            .build();
+        assert_eq!(
+            format!("\n{}\n", grammar),
+            r#"
+grammar {
+    start E'
+    rule 0: E -> T E1
+    rule 1: E1 -> "+" T E1
+    rule 2: E1 -> ε
+    rule 3: T -> F T1
+    rule 4: T1 -> "*" F T1
+    rule 5: T1 -> ε
+    rule 6: F -> "(" E ")"
+    rule 7: F -> "id"
+    rule 8: F -> "(" ")"
+    rule 9: E' -> E
+}
+"#
+        );
     }
 }
