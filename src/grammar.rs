@@ -447,6 +447,7 @@ mod tests {
     use crate::display::DisplayWith;
     use crate::grammar;
     use crate::grammar::Grammar;
+    use crate::grammar::GrammarBuilder;
 
     fn example_grammar() -> Grammar<&'static str, &'static str> {
         grammar! {
@@ -596,6 +597,34 @@ grammar {
                 "N3 -> t2 N0 t3",
                 "N3 -> t4",
             ]
+        );
+    }
+
+    #[test]
+    fn extend_grammar() {
+        let builder = GrammarBuilder::from_grammar(example_grammar());
+        // extend grammar
+        let grammar = builder
+            .push_rule_left("E'")
+            .push_rule_right_nonterminal("E")
+            .start("E'")
+            .build();
+        assert_eq!(
+            format!("\n{}\n", grammar),
+            r#"
+grammar {
+    start E'
+    rule 0: E -> T E1
+    rule 1: E1 -> "+" T E1
+    rule 2: E1 -> ε
+    rule 3: T -> F T1
+    rule 4: T1 -> "*" F T1
+    rule 5: T1 -> ε
+    rule 6: F -> "(" E ")"
+    rule 7: F -> "id"
+    rule 8: E' -> E
+}
+"#
         );
     }
 }
