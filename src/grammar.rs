@@ -334,14 +334,7 @@ where
     T: Ord,
 {
     pub fn new() -> Self {
-        Self {
-            nonterminals: Vec::new(),
-            terminals: Vec::new(),
-            rules: Vec::new(),
-            start: None,
-            nonterminal_index: BTreeMap::new(),
-            terminal_index: BTreeMap::new(),
-        }
+        Default::default()
     }
 }
 
@@ -351,7 +344,14 @@ where
     T: Ord,
 {
     fn default() -> Self {
-        Self::new()
+        Self {
+            nonterminals: Vec::new(),
+            terminals: Vec::new(),
+            rules: Vec::new(),
+            start: None,
+            nonterminal_index: BTreeMap::new(),
+            terminal_index: BTreeMap::new(),
+        }
     }
 }
 
