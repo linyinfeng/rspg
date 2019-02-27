@@ -38,7 +38,8 @@ where
                 write!(f, "{}", rule.right[i].display_with(grammar))?;
             } else if i == self.location {
                 write!(f, "·")?;
-            } else { // if i > self.location
+            } else {
+                // if i > self.location
                 write!(f, "{}", rule.right[i - 1].display_with(grammar))?;
             }
         }
