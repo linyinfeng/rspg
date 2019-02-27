@@ -34,14 +34,206 @@ where
             if i != 0 {
                 write!(f, " ")?;
             }
-            if i == self.location {
-                write!(f, "·")?;
-            }
-            if i < rule.right.len() {
+            if i < self.location {
                 write!(f, "{}", rule.right[i].display_with(grammar))?;
+            } else if i == self.location {
+                write!(f, "·")?;
+            } else { // if i > self.location
+                write!(f, "{}", rule.right[i - 1].display_with(grammar))?;
             }
         }
         write!(f, "]")?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Item;
+    use crate::display::DisplayWith;
+    use crate::grammar;
+    use crate::grammar::Grammar;
+    use crate::grammar::Symbol;
+
+    fn example_grammar() -> Grammar<&'static str, char> {
+        grammar! {
+            start E;
+            rule E -> A, 'b', 'c', E;
+            rule E -> ε;
+        }
+    }
+
+    #[test]
+    fn finished() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let first_rule = rule_indices.next().unwrap();
+        let second_rule = rule_indices.next().unwrap();
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 0,
+            }
+            .finished(&grammar),
+            false
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 1,
+            }
+            .finished(&grammar),
+            false
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 2,
+            }
+            .finished(&grammar),
+            false
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 3,
+            }
+            .finished(&grammar),
+            false
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 4,
+            }
+            .finished(&grammar),
+            true
+        );
+        assert_eq!(
+            Item {
+                rule: second_rule,
+                location: 0,
+            }
+            .finished(&grammar),
+            true
+        );
+    }
+
+    #[test]
+    fn next_symbol() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let first_rule = rule_indices.next().unwrap();
+        let second_rule = rule_indices.next().unwrap();
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 0,
+            }
+            .next_symbol(&grammar),
+            Some(Symbol::Nonterminal(grammar.nonterminal_index(&"A")))
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 1,
+            }
+            .next_symbol(&grammar),
+            Some(Symbol::Terminal(grammar.terminal_index(&'b')))
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 2,
+            }
+            .next_symbol(&grammar),
+            Some(Symbol::Terminal(grammar.terminal_index(&'c')))
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 3,
+            }
+            .next_symbol(&grammar),
+            Some(Symbol::Nonterminal(grammar.nonterminal_index(&"E")))
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 4,
+            }
+            .next_symbol(&grammar),
+            None
+        );
+        assert_eq!(
+            Item {
+                rule: second_rule,
+                location: 0,
+            }
+            .next_symbol(&grammar),
+            None
+        );
+    }
+
+    #[test]
+    fn display() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let first_rule = rule_indices.next().unwrap();
+        let second_rule = rule_indices.next().unwrap();
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 0,
+            }
+            .display_with(&grammar)
+            .to_string(),
+            "[E -> · A 'b' 'c' E]"
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 1,
+            }
+            .display_with(&grammar)
+            .to_string(),
+            "[E -> A · 'b' 'c' E]"
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 2,
+            }
+            .display_with(&grammar)
+            .to_string(),
+            "[E -> A 'b' · 'c' E]"
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 3,
+            }
+            .display_with(&grammar)
+            .to_string(),
+            "[E -> A 'b' 'c' · E]"
+        );
+        assert_eq!(
+            Item {
+                rule: first_rule,
+                location: 4,
+            }
+            .display_with(&grammar)
+            .to_string(),
+            "[E -> A 'b' 'c' E ·]"
+        );
+        assert_eq!(
+            Item {
+                rule: second_rule,
+                location: 0,
+            }
+            .display_with(&grammar)
+            .to_string(),
+            "[E -> ·]"
+        );
     }
 }
