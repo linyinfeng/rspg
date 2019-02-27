@@ -1,7 +1,9 @@
 # rspg - Rust Simple Parser Generator
 
 [![Build Status](https://travis-ci.com/linyinfeng/rspg.svg?branch=master)](https://travis-ci.com/linyinfeng/rspg)
-[![Coverage Status](https://coveralls.io/repos/github/linyinfeng/rspg/badge.svg?branch=master)](https://coveralls.io/github/linyinfeng/rspg?branch=master)
+[![Coverage Status](https://img.shields.io/coveralls/github/linyinfeng/rspg.svg)](https://coveralls.io/github/linyinfeng/rspg)
+[![Documentation](https://img.shields.io/badge/doc-master-blue.svg)](https://www.linyinfeng.com/rspg)
+[![License: MIT](https://img.shields.io/github/license/linyinfeng/rspg.svg)](https://github.com/linyinfeng/rspg/blob/master/LICENSE)
 
 A simple **experimental** rust parser generator library for syntactic analysis learning.
 
