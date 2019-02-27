@@ -480,6 +480,10 @@ mod tests {
             grammar.terminals().collect::<Vec<_>>(),
             &[&"+", &"*", &"(", &")", &"id"]
         );
+        assert!(grammar.nonterminals().all(|n| grammar.contains_nonterminal(n)));
+        assert!(["A", "B", "C"].iter().all(|n| !grammar.contains_nonterminal(n)));
+        assert!(grammar.terminals().all(|n| grammar.contains_terminal(n)));
+        assert!(["a", "b", "c"].iter().all(|n| !grammar.contains_terminal(n)));
         assert_eq!(
             grammar
                 .rules()
