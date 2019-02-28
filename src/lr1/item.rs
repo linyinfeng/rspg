@@ -1072,4 +1072,30 @@ mod tests {
 "#
         );
     }
+
+    #[test]
+    #[should_panic]
+    fn display_invalid_item_set() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let _rule1 = rule_indices.next().unwrap();
+        let _rule2 = rule_indices.next().unwrap();
+        let _rule3 = rule_indices.next().unwrap();
+        let item_set = {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: false,
+                },
+            );
+            ItemSet(map)
+        };
+        item_set.display_with(&grammar).to_string();
+    }
 }
