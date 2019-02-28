@@ -617,6 +617,109 @@ mod tests {
     }
 
     #[test]
+    fn closure_can_be_end_changed() {
+        let grammar = grammar! {
+            start S;
+            rule S -> A;
+            rule A -> A, 'a';
+            rule A -> A, A;
+            rule A -> ε;
+        };
+        let first_sets = FirstSets::of_grammar(&grammar);
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let rule1 = rule_indices.next().unwrap();
+        let rule2 = rule_indices.next().unwrap();
+        let rule3 = rule_indices.next().unwrap();
+
+        let item_set = {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule1,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: false,
+                },
+            );
+            ItemSet(map)
+        };
+        let closure = item_set.closure(&grammar, &first_sets);
+        assert_eq!(closure, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule1,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule2,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule3,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+    }
+
+    #[test]
     fn go_multiple_next_nonterminals() {
         let grammar = example_grammar();
         let mut rule_indices = grammar.rule_indices();
