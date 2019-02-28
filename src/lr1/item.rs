@@ -274,6 +274,7 @@ mod tests {
     use crate::grammar;
     use crate::grammar::Grammar;
     use crate::lr0;
+    use crate::lr1::item::ItemRef;
     use crate::lr1::item::ItemSet;
     use crate::set::FirstSets;
     use crate::set::FollowSet;
@@ -613,5 +614,140 @@ mod tests {
             );
             ItemSet(map)
         });
+    }
+
+    #[test]
+    fn finished() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let _rule1 = rule_indices.next().unwrap();
+        let _rule2 = rule_indices.next().unwrap();
+        let rule3 = rule_indices.next().unwrap();
+
+        for i in 0..1 {
+            assert_eq!(
+                {
+                    let mut map = BTreeMap::new();
+                    map.insert(
+                        lr0::item::Item {
+                            rule: rule0,
+                            location: i,
+                        },
+                        FollowSet {
+                            terminals: BTreeSet::new(),
+                            can_be_end: true,
+                        },
+                    );
+                    ItemSet(map)
+                }
+                .finished(&grammar),
+                [].iter().cloned().collect()
+            );
+        }
+        
+        assert_eq!(
+            {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 1,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 2,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                ItemSet(map)
+            }
+            .finished(&grammar),
+            [ItemRef {
+                lr0item: &lr0::item::Item {
+                    rule: rule0,
+                    location: 2,
+                },
+                follow: &FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            },]
+            .iter()
+            .cloned()
+            .collect()
+        );
+
+        assert_eq!(
+            {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 1,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 2,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule3,
+                        location: 0,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                ItemSet(map)
+            }
+            .finished(&grammar),
+            [
+                ItemRef {
+                    lr0item: &lr0::item::Item {
+                        rule: rule0,
+                        location: 2,
+                    },
+                    follow: &FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                },
+                ItemRef {
+                    lr0item: &lr0::item::Item {
+                        rule: rule3,
+                        location: 0,
+                    },
+                    follow: &FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                },
+            ]
+            .iter()
+            .cloned()
+            .collect()
+        );
     }
 }
