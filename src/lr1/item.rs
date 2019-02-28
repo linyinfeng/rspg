@@ -1038,6 +1038,7 @@ mod tests {
                 FollowSet {
                     terminals: {
                         let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'s'));
                         set.insert(grammar.terminal_index(&'a'));
                         set
                     },
@@ -1065,7 +1066,7 @@ mod tests {
             r#"
 {
     [S -> · S A, $],
-    [S -> S · A, 'a'],
+    [S -> S · A, 's'/'a'],
     [S -> S A ·, 'a'/$],
 }
 "#
