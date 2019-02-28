@@ -11,6 +11,9 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fmt;
 
+/// `ItemSet` represent a set of LR(1) items.
+/// Every LR(1) item is associated with a set of FOLLOW symbols, which is the
+/// key of the inner `BTreeMap<lr0::item::Item, FollowSet>`.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone, Default)]
 pub struct ItemSet(pub BTreeMap<lr0::item::Item, FollowSet>);
 
@@ -51,17 +54,16 @@ where
         write!(f, "{}", rule.left.display_with(grammar))?;
         write!(f, " -> ")?;
         for i in 0..=rule.right.len() {
-            if i == self.lr0item.location {
-                if i != 0 {
-                    write!(f, " ")?;
-                }
-                write!(f, "·")?;
+            if i != 0 {
+                write!(f, " ")?;
             }
-            if i < rule.right.len() {
-                if i != 0 || i == self.lr0item.location {
-                    write!(f, " ")?;
-                }
+            if i < self.lr0item.location {
                 write!(f, "{}", rule.right[i].display_with(grammar))?;
+            } else if i == self.lr0item.location {
+                write!(f, "·")?;
+            } else {
+                // i > self.lr0item.location
+                write!(f, "{}", rule.right[i - 1].display_with(grammar))?;
             }
         }
         write!(f, ", ")?;
@@ -263,5 +265,837 @@ impl ItemSet {
                 })
                 .collect(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::display::DisplayWith;
+    use crate::grammar;
+    use crate::grammar::Grammar;
+    use crate::lr0;
+    use crate::lr1::item::ItemRef;
+    use crate::lr1::item::ItemSet;
+    use crate::set::FirstSets;
+    use crate::set::FollowSet;
+    use std::collections::btree_map::BTreeMap;
+    use std::collections::BTreeSet;
+
+    fn example_grammar() -> Grammar<&'static str, char> {
+        grammar! {
+            start S;
+            rule S -> S, A;
+            rule S -> 's';
+            rule A -> A, 'a';
+            rule A -> ε;
+        }
+    }
+
+    #[test]
+    fn closure() {
+        let grammar = example_grammar();
+        let first_sets = FirstSets::of_grammar(&grammar);
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let rule1 = rule_indices.next().unwrap();
+        let rule2 = rule_indices.next().unwrap();
+        let rule3 = rule_indices.next().unwrap();
+
+        let item_set1 = {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule1,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        };
+        let closure1 = item_set1.closure(&grammar, &first_sets);
+        assert_eq!(closure1, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule1,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+
+        let next_nonterminals1 = closure1.next_nonterminals(&grammar);
+        let next_terminals1 = closure1.next_terminals(&grammar);
+        assert_eq!(
+            next_nonterminals1,
+            [grammar.nonterminal_index(&"S")]
+                .into_iter()
+                .cloned()
+                .collect()
+        );
+        assert_eq!(
+            next_terminals1,
+            [grammar.terminal_index(&'s')]
+                .into_iter()
+                .cloned()
+                .collect()
+        );
+
+        let item_set2 = closure1.go_nonterminal(&grammar, grammar.nonterminal_index(&"S"));
+        assert_eq!(item_set2, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+        let closure2 = item_set2.closure(&grammar, &first_sets);
+        assert_eq!(closure2, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule2,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule3,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+
+        let item_set3 = closure1.go_terminal(&grammar, grammar.terminal_index(&'s'));
+        assert_eq!(item_set3, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule1,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+        let closure3 = item_set3.closure(&grammar, &first_sets);
+        assert_eq!(closure3, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule1,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+
+        let next_nonterminals2 = closure2.next_nonterminals(&grammar);
+        let next_terminals2 = closure2.next_terminals(&grammar);
+        assert_eq!(
+            next_nonterminals2,
+            [grammar.nonterminal_index(&"A")]
+                .into_iter()
+                .cloned()
+                .collect()
+        );
+        assert_eq!(next_terminals2, [].into_iter().cloned().collect());
+
+        let item_set4 = closure2.go_nonterminal(&grammar, grammar.nonterminal_index(&"A"));
+        assert_eq!(item_set4, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 2,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule2,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+        let closure4 = item_set4.closure(&grammar, &first_sets);
+        assert_eq!(closure4, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 2,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule2,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+
+        let next_nonterminals3 = closure3.next_nonterminals(&grammar);
+        let next_terminals3 = closure3.next_terminals(&grammar);
+        assert_eq!(next_nonterminals3, [].into_iter().cloned().collect());
+        assert_eq!(next_terminals3, [].into_iter().cloned().collect());
+
+        let next_nonterminals4 = closure4.next_nonterminals(&grammar);
+        let next_terminals4 = closure4.next_terminals(&grammar);
+        assert_eq!(next_nonterminals4, [].into_iter().cloned().collect());
+        assert_eq!(
+            next_terminals4,
+            [grammar.terminal_index(&'a')]
+                .into_iter()
+                .cloned()
+                .collect()
+        );
+
+        let item_set5 = closure4.go_terminal(&grammar, grammar.terminal_index(&'a'));
+        assert_eq!(item_set5, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule2,
+                    location: 2,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+        let closure5 = item_set5.closure(&grammar, &first_sets);
+        assert_eq!(closure5, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule2,
+                    location: 2,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+    }
+
+    #[test]
+    fn closure_can_be_end_changed() {
+        let grammar = grammar! {
+            start S;
+            rule S -> A;
+            rule A -> A, 'a';
+            rule A -> A, A;
+            rule A -> ε;
+        };
+        let first_sets = FirstSets::of_grammar(&grammar);
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let rule1 = rule_indices.next().unwrap();
+        let rule2 = rule_indices.next().unwrap();
+        let rule3 = rule_indices.next().unwrap();
+
+        let item_set = {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule1,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: false,
+                },
+            );
+            ItemSet(map)
+        };
+        let closure = item_set.closure(&grammar, &first_sets);
+        assert_eq!(closure, {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule1,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule2,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule3,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        });
+    }
+
+    #[test]
+    fn go_multiple_next_nonterminals() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let _rule1 = rule_indices.next().unwrap();
+        let _rule2 = rule_indices.next().unwrap();
+        let _rule3 = rule_indices.next().unwrap();
+
+        let item_set = {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        };
+        assert_eq!(
+            item_set.next_nonterminals(&grammar),
+            [
+                grammar.nonterminal_index(&"S"),
+                grammar.nonterminal_index(&"A"),
+            ]
+            .iter()
+            .cloned()
+            .collect()
+        );
+        assert_eq!(
+            item_set.go_nonterminal(&grammar, grammar.nonterminal_index(&"S")),
+            {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 1,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                ItemSet(map)
+            }
+        );
+        assert_eq!(
+            item_set.go_nonterminal(&grammar, grammar.nonterminal_index(&"A")),
+            {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 2,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                ItemSet(map)
+            }
+        );
+    }
+
+    #[test]
+    fn go_multiple_next_terminals() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let _rule0 = rule_indices.next().unwrap();
+        let rule1 = rule_indices.next().unwrap();
+        let rule2 = rule_indices.next().unwrap();
+        let _rule3 = rule_indices.next().unwrap();
+
+        let item_set = {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule1,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule2,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        };
+        assert_eq!(
+            item_set.next_terminals(&grammar),
+            [grammar.terminal_index(&'s'), grammar.terminal_index(&'a'),]
+                .iter()
+                .cloned()
+                .collect()
+        );
+        assert_eq!(
+            item_set.go_terminal(&grammar, grammar.terminal_index(&'s')),
+            {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule1,
+                        location: 1,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                ItemSet(map)
+            }
+        );
+        assert_eq!(
+            item_set.go_terminal(&grammar, grammar.terminal_index(&'a')),
+            {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule2,
+                        location: 2,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                ItemSet(map)
+            }
+        );
+    }
+
+    #[test]
+    fn finished() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let _rule1 = rule_indices.next().unwrap();
+        let _rule2 = rule_indices.next().unwrap();
+        let rule3 = rule_indices.next().unwrap();
+
+        for i in 0..1 {
+            assert_eq!(
+                {
+                    let mut map = BTreeMap::new();
+                    map.insert(
+                        lr0::item::Item {
+                            rule: rule0,
+                            location: i,
+                        },
+                        FollowSet {
+                            terminals: BTreeSet::new(),
+                            can_be_end: true,
+                        },
+                    );
+                    ItemSet(map)
+                }
+                .finished(&grammar),
+                [].iter().cloned().collect()
+            );
+        }
+
+        assert_eq!(
+            {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 1,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 2,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                ItemSet(map)
+            }
+            .finished(&grammar),
+            [ItemRef {
+                lr0item: &lr0::item::Item {
+                    rule: rule0,
+                    location: 2,
+                },
+                follow: &FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            },]
+            .iter()
+            .cloned()
+            .collect()
+        );
+
+        assert_eq!(
+            {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 1,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule0,
+                        location: 2,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                map.insert(
+                    lr0::item::Item {
+                        rule: rule3,
+                        location: 0,
+                    },
+                    FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                );
+                ItemSet(map)
+            }
+            .finished(&grammar),
+            [
+                ItemRef {
+                    lr0item: &lr0::item::Item {
+                        rule: rule0,
+                        location: 2,
+                    },
+                    follow: &FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                },
+                ItemRef {
+                    lr0item: &lr0::item::Item {
+                        rule: rule3,
+                        location: 0,
+                    },
+                    follow: &FollowSet {
+                        terminals: BTreeSet::new(),
+                        can_be_end: true,
+                    },
+                },
+            ]
+            .iter()
+            .cloned()
+            .collect()
+        );
+    }
+
+    #[test]
+    fn display() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let _rule1 = rule_indices.next().unwrap();
+        let _rule2 = rule_indices.next().unwrap();
+        let _rule3 = rule_indices.next().unwrap();
+
+        let item_set = {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'s'));
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: false,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 2,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        };
+        assert_eq!(
+            format!("\n{}\n", item_set.display_with(&grammar)),
+            r#"
+{
+    [S -> · S A, $],
+    [S -> S · A, 's'/'a'],
+    [S -> S A ·, 'a'/$],
+}
+"#
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn display_invalid_item_set() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let _rule1 = rule_indices.next().unwrap();
+        let _rule2 = rule_indices.next().unwrap();
+        let _rule3 = rule_indices.next().unwrap();
+        let item_set = {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: false,
+                },
+            );
+            ItemSet(map)
+        };
+        item_set.display_with(&grammar).to_string();
     }
 }

@@ -164,7 +164,7 @@ where
     }
 }
 
-fn extend_grammar<N, T>(grammar: &Grammar<N, T>, nonterminal: N) -> Grammar<N, T>
+pub fn extend_grammar<N, T>(grammar: &Grammar<N, T>, nonterminal: N) -> Grammar<N, T>
 where
     N: Ord + Clone,
     T: Ord + Clone,
