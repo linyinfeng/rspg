@@ -54,17 +54,16 @@ where
         write!(f, "{}", rule.left.display_with(grammar))?;
         write!(f, " -> ")?;
         for i in 0..=rule.right.len() {
-            if i == self.lr0item.location {
-                if i != 0 {
-                    write!(f, " ")?;
-                }
-                write!(f, "·")?;
+            if i != 0 {
+                write!(f, " ")?;
             }
-            if i < rule.right.len() {
-                if i != 0 || i == self.lr0item.location {
-                    write!(f, " ")?;
-                }
+            if i < self.lr0item.location {
                 write!(f, "{}", rule.right[i].display_with(grammar))?;
+            } else if i == self.lr0item.location {
+                write!(f, "·")?;
+            } else {
+                // i > self.lr0item.location
+                write!(f, "{}", rule.right[i - 1].display_with(grammar))?;
             }
         }
         write!(f, ", ")?;
@@ -271,6 +270,7 @@ impl ItemSet {
 
 #[cfg(test)]
 mod tests {
+    use crate::display::DisplayWith;
     use crate::grammar;
     use crate::grammar::Grammar;
     use crate::lr0;
@@ -1006,6 +1006,69 @@ mod tests {
             .iter()
             .cloned()
             .collect()
+        );
+    }
+
+    #[test]
+    fn display() {
+        let grammar = example_grammar();
+        let mut rule_indices = grammar.rule_indices();
+        let rule0 = rule_indices.next().unwrap();
+        let _rule1 = rule_indices.next().unwrap();
+        let _rule2 = rule_indices.next().unwrap();
+        let _rule3 = rule_indices.next().unwrap();
+
+        let item_set = {
+            let mut map = BTreeMap::new();
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 0,
+                },
+                FollowSet {
+                    terminals: BTreeSet::new(),
+                    can_be_end: true,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 1,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: false,
+                },
+            );
+            map.insert(
+                lr0::item::Item {
+                    rule: rule0,
+                    location: 2,
+                },
+                FollowSet {
+                    terminals: {
+                        let mut set = BTreeSet::new();
+                        set.insert(grammar.terminal_index(&'a'));
+                        set
+                    },
+                    can_be_end: true,
+                },
+            );
+            ItemSet(map)
+        };
+        assert_eq!(
+            format!("\n{}\n", item_set.display_with(&grammar)),
+            r#"
+{
+    [S -> · S A, $],
+    [S -> S · A, 'a'],
+    [S -> S A ·, 'a'/$],
+}
+"#
         );
     }
 }
