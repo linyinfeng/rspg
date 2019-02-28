@@ -277,7 +277,6 @@ mod tests {
     use crate::lr1::item::ItemSet;
     use crate::set::FirstSets;
     use crate::set::FollowSet;
-    use crate::set::FollowSets;
     use std::collections::btree_map::BTreeMap;
     use std::collections::BTreeSet;
 
@@ -295,7 +294,6 @@ mod tests {
     fn closure() {
         let grammar = example_grammar();
         let first_sets = FirstSets::of_grammar(&grammar);
-        let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
         let mut rule_indices = grammar.rule_indices();
         let rule0 = rule_indices.next().unwrap();
         let rule1 = rule_indices.next().unwrap();
