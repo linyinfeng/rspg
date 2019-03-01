@@ -3,12 +3,13 @@ language: rust
 services:
   - docker
 
-cache: cargo
+cache:
+  - cargo
 
 rust:
-- stable
-- beta
-- nightly
+  - stable
+  - beta
+  - nightly
 
 matrix:
   allow_failures:
