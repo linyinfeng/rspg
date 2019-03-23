@@ -1,11 +1,11 @@
 use rspg::display::DisplayWith;
 use rspg::grammar;
 use rspg::lr1::generator::Generator;
-use rspg::lr1::parser::Event;
 use rspg::lr1::parser::Parser;
 use rspg::set::FirstSets;
 use rspg::set::FollowSets;
 use rspg::token;
+use std::marker::PhantomData;
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 enum Terminal {
@@ -90,21 +90,68 @@ fn main() {
     }
     println!("\n");
 
-    println!("events:");
-    let mut parser = Parser::new(&grammar, &table, input.iter());
-    loop {
-        match parser.next_event() {
-            Event::Reduce(r) => {
-                println!("use rule {} reduce: {}", r.rule, r.display_with(&grammar))
+    let parser = {
+        Parser {
+            grammar: &grammar,
+            table: &table,
+            reducer: |mut r| {
+                let mut rule_indices = grammar.rule_indices();
+                let rule_plus = rule_indices.next().unwrap();
+                let rule_sub = rule_indices.next().unwrap();
+                let rule_et = rule_indices.next().unwrap();
+                let rule_mul = rule_indices.next().unwrap();
+                let rule_div = rule_indices.next().unwrap();
+                let rule_tf = rule_indices.next().unwrap();
+                let rule_bracket = rule_indices.next().unwrap();
+                let rule_number = rule_indices.next().unwrap();
+                println!("use rule {} reduce: {}", r.rule, r.display_with(&grammar));
+                if r.rule == rule_plus {
+                    let e = r.from.pop_front().unwrap();
+                    let _ = r.from.pop_front().unwrap();
+                    let t = r.from.pop_front().unwrap();
+                    Ok(e.parsed().unwrap() + t.parsed().unwrap())
+                } else if r.rule == rule_sub {
+                    let e = r.from.pop_front().unwrap();
+                    let _ = r.from.pop_front().unwrap();
+                    let t = r.from.pop_front().unwrap();
+                    Ok(e.parsed().unwrap() - t.parsed().unwrap())
+                } else if r.rule == rule_et {
+                    let t = r.from.pop_front().unwrap();
+                    Ok(t.parsed().unwrap())
+                } else if r.rule == rule_mul {
+                    let t = r.from.pop_front().unwrap();
+                    let _ = r.from.pop_front().unwrap();
+                    let f = r.from.pop_front().unwrap();
+                    Ok(t.parsed().unwrap() * f.parsed().unwrap())
+                } else if r.rule == rule_div {
+                    let t = r.from.pop_front().unwrap();
+                    let _ = r.from.pop_front().unwrap();
+                    let f = r.from.pop_front().unwrap();
+                    Ok(t.parsed().unwrap() / f.parsed().unwrap())
+                } else if r.rule == rule_tf {
+                    let f = r.from.pop_front().unwrap();
+                    Ok(f.parsed().unwrap())
+                } else if r.rule == rule_bracket {
+                    let _ = r.from.pop_front().unwrap();
+                    let n = r.from.pop_front().unwrap();
+                    let _ = r.from.pop_front().unwrap();
+                    Ok(n.parsed().unwrap())
+                } else if r.rule == rule_number {
+                    let n = r.from.pop_front().unwrap();
+                    match n.token().unwrap() {
+                        Token::Number(n) => Ok(n),
+                        _ => Err("not a number token"),
+                    }
+                } else {
+                    unimplemented!()
+                }
             },
-            Event::Accept => {
-                println!("accepted");
-                break
-            },
-            Event::Error(e) => {
-                println!("error: {:?}", e);
-                break
-            },
+            phantom: PhantomData,
         }
+    };
+    println!("events:");
+    match parser.parse(input.into_iter()) {
+        Ok(p) => println!("accepted: {:?}", p),
+        Err(e) => println!("error: {:?}", e),
     }
 }
