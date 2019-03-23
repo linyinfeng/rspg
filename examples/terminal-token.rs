@@ -1,11 +1,11 @@
 use rspg::display::DisplayWith;
 use rspg::grammar;
 use rspg::lr1::generator::Generator;
-use rspg::lr1::parser::Event;
 use rspg::lr1::parser::Parser;
 use rspg::set::FirstSets;
 use rspg::set::FollowSets;
 use rspg::token::TerminalToken;
+use std::marker::PhantomData;
 
 fn main() {
     let grammar = grammar! {
@@ -43,21 +43,18 @@ fn main() {
     let input = "aab";
     println!("input:\n{:?}\n", input);
 
+    let parser = Parser::<_, _, _, _, _, ()> {
+        grammar: &grammar,
+        table: &table,
+        reducer: |r| {
+            println!("use rule {} reduce: {}", r.rule, r.display_with(&grammar));
+            Ok(())
+        },
+        phantom: PhantomData,
+    };
     println!("events:");
-    let mut parser = Parser::new(&grammar, &table, input.chars().map(TerminalToken::new));
-    loop {
-        match parser.next_event() {
-            Event::Reduce(r) => {
-                println!("use rule {} reduce: {}", r.rule, r.display_with(&grammar))
-            },
-            Event::Accept => {
-                println!("accepted");
-                break
-            },
-            Event::Error(e) => {
-                println!("error: {:?}", e);
-                break
-            },
-        }
+    match parser.parse(input.chars().map(TerminalToken)) {
+        Ok(p) => println!("accepted: {:?}", p),
+        Err(e) => println!("error: {:?}", e),
     }
 }

@@ -17,14 +17,12 @@ rspg = { git = "https://github.com/linyinfeng/rspg" }
 - [x] Grammar
 - [x] FIRST Set
 - [x] FOLLOW Set
-- [ ] LL(1) Parser
-- [ ] LL(1) Table Generator
-- [ ] SLR(1) Parser
-- [ ] SLR(1) Table Generator
 - [x] LR(1) Parser
 - [x] LR(1) Table Generator
 - [ ] Tests
 - [ ] Documentation
+- [x] Basic ability to use LR(1) parse result
+- [ ] More elegant and faster compile time parser generator interface
 - [ ] ...
 
 ## Documentation
