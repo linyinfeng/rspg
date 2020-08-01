@@ -99,13 +99,13 @@ impl FirstSets {
                     if set.can_be_empty {
                         empty_count += 1;
                     } else {
-                        break
+                        break;
                     }
-                },
+                }
                 Symbol::Terminal(t) => {
                     first_set.terminals.insert(*t);
-                    break
-                },
+                    break;
+                }
             }
         }
         if empty_count == symbol_string.len() {
@@ -132,7 +132,7 @@ impl FirstSets {
         loop {
             if !sets.iteration(&grammar) {
                 // if not changed
-                break
+                break;
             }
         }
         sets
@@ -153,13 +153,13 @@ impl FirstSets {
                         if self.first_set_of_nonterminal(*n).can_be_empty {
                             empty_count += 1;
                         } else {
-                            break
+                            break;
                         }
-                    },
+                    }
                     Symbol::Terminal(t) => {
                         changed |= self.merge_nonterminal_to_first_set(*left, *t);
-                        break
-                    },
+                        break;
+                    }
                 }
             }
             if empty_count == right.len() {
@@ -322,7 +322,7 @@ impl FollowSets {
         loop {
             if !sets.iteration(grammar, first_sets) {
                 // if not changed
-                break
+                break;
             }
         }
         sets

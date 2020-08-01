@@ -30,7 +30,7 @@ where
         match self {
             SymbolStackItem::Nonterminal(n, p) => {
                 write!(f, "{}{{{:?}}}", n.display_with(grammar), p)
-            },
+            }
             SymbolStackItem::Token(t) => write!(f, "{:?}", t),
         }
     }
@@ -190,13 +190,13 @@ where
                                 state,
                                 symbol: Some(SymbolStackItem::Token(token)),
                             });
-                        },
+                        }
                         Action::Reduce(rule) => match self.reduce(&mut stack, rule) {
                             Ok(()) => (),
                             Err(e) => return Err(e),
                         },
                     }
-                },
+                }
                 None => match self.table.end_action(state) {
                     EndAction::Error => return Err(Error::NoEndAction),
                     EndAction::Accept => {
@@ -204,17 +204,17 @@ where
                             match stack.pop().unwrap().symbol.unwrap() {
                                 SymbolStackItem::Nonterminal(nonterminal, parsed) => {
                                     if nonterminal == self.grammar.start_index() {
-                                        return Ok(parsed)
+                                        return Ok(parsed);
                                     } else {
-                                        return Err(Error::NotAcceptOnStart)
+                                        return Err(Error::NotAcceptOnStart);
                                     }
-                                },
+                                }
                                 SymbolStackItem::Token(_) => return Err(Error::IncompleteAccept),
                             }
                         } else {
-                            return Err(Error::IncompleteAccept)
+                            return Err(Error::IncompleteAccept);
                         }
-                    },
+                    }
                     EndAction::Reduce(rule) => match self.reduce(&mut stack, rule) {
                         Ok(()) => (),
                         Err(e) => return Err(e),
@@ -255,10 +255,10 @@ where
                             symbol: Some(SymbolStackItem::Nonterminal(rule.left, reduced)),
                         });
                         Ok(())
-                    },
+                    }
                     Goto::Error => Err(Error::NoGoto),
                 }
-            },
+            }
             Err(e) => Err(Error::Reduce(e)),
         }
     }

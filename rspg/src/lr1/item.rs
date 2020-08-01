@@ -104,7 +104,7 @@ impl ItemSet {
         loop {
             if !self.closure_iteration(grammar, first_sets) {
                 // if not changed
-                break
+                break;
             }
         }
         self
@@ -169,7 +169,7 @@ impl ItemSet {
                 None => {
                     changed = true;
                     self.0.insert(lr0item, follow);
-                },
+                }
                 Some(origin_follow) => {
                     let origin_len = origin_follow.terminals.len();
                     origin_follow.terminals.append(&mut follow.terminals);
@@ -180,7 +180,7 @@ impl ItemSet {
                         changed = true;
                         origin_follow.can_be_end = true;
                     }
-                },
+                }
             }
         }
         changed

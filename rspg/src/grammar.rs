@@ -450,7 +450,7 @@ where
                 let new_index = NonterminalIndex(self.nonterminals.len());
                 self.nonterminals.push((nonterminal, Vec::new()));
                 *v.insert(new_index)
-            },
+            }
             Entry::Occupied(o) => *o.get(),
         }
     }
@@ -461,7 +461,7 @@ where
                 let new_index = TerminalIndex(self.terminals.len());
                 self.terminals.push(terminal);
                 *v.insert(new_index)
-            },
+            }
             Entry::Occupied(o) => *o.get(),
         }
     }

@@ -40,7 +40,7 @@ impl fmt::Display for Action {
         match self {
             Action::Reduce(index) => {
                 write!(f, "r{}", index)?;
-            },
+            }
             Action::Shift(state) => write!(f, "s{}", state)?,
             Action::Error => write!(f, "")?,
         }
@@ -57,7 +57,7 @@ where
         match self {
             Action::Reduce(index) => {
                 write!(f, "r{}", index.display_with(grammar))?;
-            },
+            }
             Action::Shift(state) => write!(f, "s{}", state)?,
             Action::Error => write!(f, "")?,
         }
@@ -84,7 +84,7 @@ impl fmt::Display for EndAction {
         match self {
             EndAction::Reduce(index) => {
                 write!(f, "r{}", index)?;
-            },
+            }
             EndAction::Accept => write!(f, "acc")?,
             EndAction::Error => write!(f, "")?,
         }
@@ -101,7 +101,7 @@ where
         match self {
             EndAction::Reduce(index) => {
                 write!(f, "r{}", index.display_with(grammar))?;
-            },
+            }
             EndAction::Accept => write!(f, "acc")?,
             EndAction::Error => write!(f, "")?,
         }

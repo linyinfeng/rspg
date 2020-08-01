@@ -63,7 +63,7 @@ where
                 if let Action::Error = table.action(*state, *terminal) {
                     *table.action_mut(*state, *terminal) = Action::Shift(states[*go_state]);
                 } else {
-                    return None
+                    return None;
                 }
             }
             for ItemRef { lr0item, follow } in item_set.finished(&self.extended_grammar) {
@@ -71,20 +71,20 @@ where
                     if let Action::Error = table.action(*state, *terminal) {
                         *table.action_mut(*state, *terminal) = Action::Reduce(lr0item.rule);
                     } else {
-                        return None
+                        return None;
                     }
                 }
                 if follow.can_be_end {
                     if let EndAction::Error = table.end_action(*state) {
-                        if self.extended_grammar.rule(lr0item.rule).left ==
-                            self.extended_grammar.start_index()
+                        if self.extended_grammar.rule(lr0item.rule).left
+                            == self.extended_grammar.start_index()
                         {
                             *table.end_action_mut(*state) = EndAction::Accept;
                         } else {
                             *table.end_action_mut(*state) = EndAction::Reduce(lr0item.rule);
                         }
                     } else {
-                        return None
+                        return None;
                     }
                 }
             }
@@ -92,7 +92,7 @@ where
                 if let Goto::Error = table.goto(*state, *nonterminal) {
                     *table.goto_mut(*state, *nonterminal) = Goto::Goto(states[*go_state]);
                 } else {
-                    return None
+                    return None;
                 }
             }
         }
@@ -149,7 +149,7 @@ where
             }
             current_index += 1;
             if current_index == self.canonical_collection.len() {
-                break
+                break;
             }
         }
     }
@@ -162,7 +162,7 @@ where
                 self.go_terminal.push(BTreeMap::new());
                 self.go_nonterminal.push(BTreeMap::new());
                 *v.insert(index)
-            },
+            }
             Entry::Occupied(o) => *o.get(),
         }
     }
