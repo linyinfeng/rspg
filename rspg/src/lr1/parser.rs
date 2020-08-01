@@ -180,7 +180,7 @@ where
 
             match input.peek() {
                 Some(token) => {
-                    let terminal = self.grammar.terminal_index(&token.terminal());
+                    let terminal = token.terminal_index(self.grammar);
                     let action = Some(self.table.action(state, terminal));
                     match action.expect("token can not match any terminals") {
                         Action::Error => return Err(Error::NoAction),

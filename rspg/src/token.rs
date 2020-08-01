@@ -1,3 +1,5 @@
+use crate::grammar::Grammar;
+use crate::grammar::TerminalIndex;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt;
@@ -7,13 +9,24 @@ use std::ops::DerefMut;
 /// `Token<Terminal>` is a trait. Types which implement `Token<Terminal>`
 /// implement function `Token<Terminal>::terminal` which return the associated
 /// terminal of the token.
-pub trait Token<Terminal> {
+pub trait Token<Terminal>
+where
+    Terminal: Ord,
+{
     fn terminal(&self) -> Terminal;
+
+    fn terminal_index<N>(&self, grammar: &Grammar<N, Terminal>) -> TerminalIndex
+    where
+        N: Ord,
+    {
+        grammar.terminal_index(&self.terminal())
+    }
 }
 
 /// Implements all reference to a `Token<Terminal>` as `Token<Terminal>`.
 impl<Terminal, T> Token<Terminal> for &T
 where
+    Terminal: Ord,
     T: Token<Terminal>,
 {
     /// Deref and call `Token<Terminal>::terminal`.
@@ -42,7 +55,7 @@ impl<T> DerefMut for TerminalToken<T> {
 
 impl<T> Token<T> for TerminalToken<T>
 where
-    T: Copy,
+    T: Ord + Copy,
 {
     fn terminal(&self) -> T {
         self.0
