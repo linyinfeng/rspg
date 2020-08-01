@@ -10,7 +10,7 @@ use std::fmt;
 
 /// A struct describing a FIRST set of something.
 ///
-/// A FIRST set contains a set of terminals and ε.
+/// A FIRST set contains a set of terminals and epsilon.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FirstSet {
     pub terminals: BTreeSet<TerminalIndex>,
@@ -33,7 +33,7 @@ impl fmt::Display for FirstSet {
             if i != 0usize {
                 write!(f, ", ")?;
             }
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         }
         write!(f, "}}")?;
         Ok(())
@@ -60,7 +60,7 @@ where
             if i != 0usize {
                 write!(f, ", ")?;
             }
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         }
         write!(f, "}}")?;
         Ok(())
@@ -461,10 +461,10 @@ mod test {
             start E;
             rule E -> T, E1;
             rule E1 -> "+", T, E1;
-            rule E1 -> ε;
+            rule E1 -> epsilon;
             rule T -> F, T1;
             rule T1 -> "*", F, T1;
-            rule T1 -> ε;
+            rule T1 -> epsilon;
             rule F -> "(", E, ")";
             rule F -> "id";
         }
@@ -488,7 +488,7 @@ mod test {
         let grammar = grammar! {
             start A;
             rule A -> '(', A, ')', A;
-            rule A -> ε;
+            rule A -> epsilon;
         };
         let first_sets = FirstSets::of_grammar(&grammar);
         let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
@@ -522,9 +522,9 @@ mod test {
             start S;
             rule S -> A, B;
             rule A -> 'a';
-            rule A -> ε;
+            rule A -> epsilon;
             rule B -> 'b';
-            rule B -> ε;
+            rule B -> epsilon;
         };
         let first_sets = FirstSets::of_grammar(&grammar);
         assert_first_set(&first_sets, &grammar, &"S", &['a', 'b'], true);
@@ -541,9 +541,9 @@ mod test {
             r#"
 E: {"(", "id"}
 T: {"(", "id"}
-E1: {"+", ε}
+E1: {"+", epsilon}
 F: {"(", "id"}
-T1: {"*", ε}
+T1: {"*", epsilon}
 "#
         );
     }
@@ -588,7 +588,7 @@ T1: {"+", ")", $}
                 "{}",
                 first_sets.first_set_of_nonterminal(grammar.nonterminal_index(&"E1"))
             ),
-            "{t0, ε}"
+            "{t0, epsilon}"
         );
         assert_eq!(
             format!(
@@ -602,7 +602,7 @@ T1: {"+", ")", $}
                 "{}",
                 first_sets.first_set_of_nonterminal(grammar.nonterminal_index(&"T1"))
             ),
-            "{t1, ε}"
+            "{t1, epsilon}"
         );
     }
 

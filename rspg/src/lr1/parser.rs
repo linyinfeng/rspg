@@ -114,7 +114,7 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         if self.is_empty() {
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         } else {
             for (i, item) in self.iter().enumerate() {
                 if i != 0 {

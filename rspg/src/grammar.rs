@@ -157,7 +157,7 @@ impl SymbolString {
 impl fmt::Display for SymbolString {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         if self.is_empty() {
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         } else {
             for (i, symbol) in self.iter().enumerate() {
                 if i != 0 {
@@ -177,7 +177,7 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         if self.is_empty() {
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         } else {
             for (i, symbol) in self.iter().enumerate() {
                 if i != 0 {
@@ -490,10 +490,10 @@ mod tests {
             start E;
             rule E -> T, E1;
             rule E1 -> "+", T, E1;
-            rule E1 -> ε;
+            rule E1 -> epsilon;
             rule T -> F, T1;
             rule T1 -> "*", F, T1;
-            rule T1 -> ε;
+            rule T1 -> epsilon;
             rule F -> "(", E, ")";
             rule F -> "id";
             rule F -> "(", ")";
@@ -535,10 +535,10 @@ mod tests {
             &[
                 r#"E -> T E1"#,
                 r#"E1 -> "+" T E1"#,
-                r#"E1 -> ε"#,
+                r#"E1 -> epsilon"#,
                 r#"T -> F T1"#,
                 r#"T1 -> "*" F T1"#,
-                r#"T1 -> ε"#,
+                r#"T1 -> epsilon"#,
                 r#"F -> "(" E ")""#,
                 r#"F -> "id""#,
                 r#"F -> "(" ")""#,
@@ -558,7 +558,7 @@ mod tests {
                 .map(|r| r.display_with(&grammar))
                 .map(|mix| mix.to_string())
                 .collect::<Vec<_>>(),
-            &[r#"E1 -> "+" T E1"#, r#"E1 -> ε"#,]
+            &[r#"E1 -> "+" T E1"#, r#"E1 -> epsilon"#,]
         );
         assert_eq!(
             grammar
@@ -574,7 +574,7 @@ mod tests {
                 .map(|r| r.display_with(&grammar))
                 .map(|mix| mix.to_string())
                 .collect::<Vec<_>>(),
-            &[r#"T1 -> "*" F T1"#, r#"T1 -> ε"#,]
+            &[r#"T1 -> "*" F T1"#, r#"T1 -> epsilon"#,]
         );
         assert_eq!(
             grammar
@@ -619,10 +619,10 @@ grammar {
     start E
     rule 0: E -> T E1
     rule 1: E1 -> "+" T E1
-    rule 2: E1 -> ε
+    rule 2: E1 -> epsilon
     rule 3: T -> F T1
     rule 4: T1 -> "*" F T1
-    rule 5: T1 -> ε
+    rule 5: T1 -> epsilon
     rule 6: F -> "(" E ")"
     rule 7: F -> "id"
     rule 8: F -> "(" ")"
@@ -639,10 +639,10 @@ grammar {
             &[
                 "N0 -> N1 N2",
                 "N2 -> t0 N1 N2",
-                "N2 -> ε",
+                "N2 -> epsilon",
                 "N1 -> N3 N4",
                 "N4 -> t1 N3 N4",
-                "N4 -> ε",
+                "N4 -> epsilon",
                 "N3 -> t2 N0 t3",
                 "N3 -> t4",
                 "N3 -> t2 t3",
@@ -666,10 +666,10 @@ grammar {
     start E'
     rule 0: E -> T E1
     rule 1: E1 -> "+" T E1
-    rule 2: E1 -> ε
+    rule 2: E1 -> epsilon
     rule 3: T -> F T1
     rule 4: T1 -> "*" F T1
-    rule 5: T1 -> ε
+    rule 5: T1 -> epsilon
     rule 6: F -> "(" E ")"
     rule 7: F -> "id"
     rule 8: F -> "(" ")"

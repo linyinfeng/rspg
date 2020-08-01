@@ -319,7 +319,7 @@ mod tests {
             rule S -> S, A;
             rule S -> 's';
             rule A -> A, 'a';
-            rule A -> ε;
+            rule A -> epsilon;
         }
     }
 
@@ -643,7 +643,7 @@ mod tests {
             rule S -> A;
             rule A -> A, 'a';
             rule A -> A, A;
-            rule A -> ε;
+            rule A -> epsilon;
         };
         let first_sets = FirstSets::of_grammar(&grammar);
         let mut rule_indices = grammar.rule_indices();

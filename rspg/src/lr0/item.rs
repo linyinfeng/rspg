@@ -70,7 +70,7 @@ mod tests {
         grammar! {
             start E;
             rule E -> A, 'b', 'c', E;
-            rule E -> ε;
+            rule E -> epsilon;
         }
     }
 

@@ -20,7 +20,7 @@ macro_rules! grammar {
             $builder
         }
     };
-    (with builder $builder:ident in rule | ε ; $($tail:tt)*) => {
+    (with builder $builder:ident in rule | epsilon ; $($tail:tt)*) => {
         {
             grammar! { with builder $builder | $($tail)* }
         }
