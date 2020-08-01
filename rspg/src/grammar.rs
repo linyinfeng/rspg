@@ -69,6 +69,10 @@ where
 pub struct RuleIndex(pub(self) usize);
 
 impl RuleIndex {
+    pub unsafe fn new(index: usize) -> Self {
+        Self(index)
+    }
+
     pub fn value(self) -> usize {
         self.0
     }
