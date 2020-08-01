@@ -161,7 +161,7 @@ pub enum Error<E> {
 
 impl<'t, 'g, N, Term, Token, Parsed, F, E> Parser<'t, 'g, N, Term, Token, Parsed, F, E>
 where
-    N: Ord + Copy,
+    N: Ord,
     Term: Ord,
     Token: token::Token<Term>,
     F: Fn(Reduce<Parsed, Token>) -> Result<Parsed, E>,

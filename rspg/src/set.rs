@@ -307,8 +307,8 @@ impl FollowSets {
     /// Calculate the FOLLOW sets of every non-terminals of the `grammar`.
     pub fn of_grammar<N, T>(grammar: &Grammar<N, T>, first_sets: &FirstSets) -> FollowSets
     where
-        N: Ord + Copy,
-        T: Ord + Copy,
+        N: Ord,
+        T: Ord,
     {
         let mut sets = FollowSets(vec_with_size(
             grammar.nonterminals_len(),
