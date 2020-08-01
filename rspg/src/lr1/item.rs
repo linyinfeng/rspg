@@ -19,8 +19,8 @@ pub struct ItemSet(pub BTreeMap<lr0::item::Item, FollowSet>);
 
 impl<N, T> DisplayWith<Grammar<N, T>> for ItemSet
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         writeln!(f, "{{")?;
@@ -44,8 +44,8 @@ pub struct ItemRef<'r> {
 
 impl<'r, N, T> DisplayWith<Grammar<N, T>> for ItemRef<'r>
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "[")?;
@@ -96,7 +96,11 @@ impl ItemSet {
         ItemSet(BTreeMap::new())
     }
 
-    pub fn closure<N, T>(mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> Self {
+    pub fn closure<N, T>(mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> Self
+    where
+        N: Ord,
+        T: Ord,
+    {
         loop {
             if !self.closure_iteration(grammar, first_sets) {
                 // if not changed
@@ -106,7 +110,11 @@ impl ItemSet {
         self
     }
 
-    fn closure_iteration<N, T>(&mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> bool {
+    fn closure_iteration<N, T>(&mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> bool
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut change = ItemSet::new();
         for (lr0item, follow) in &self.0 {
             if let Some(Symbol::Nonterminal(nonterminal)) = lr0item.next_symbol(grammar) {
@@ -126,7 +134,11 @@ impl ItemSet {
         after_first_set: FirstSet,
         origin_follow_set: &FollowSet,
         nonterminal: NonterminalIndex,
-    ) -> ItemSet {
+    ) -> ItemSet
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut map = BTreeMap::new();
         let follow = {
             let mut set = FollowSet {
@@ -174,7 +186,11 @@ impl ItemSet {
         changed
     }
 
-    pub fn next_nonterminals<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<NonterminalIndex> {
+    pub fn next_nonterminals<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<NonterminalIndex>
+    where
+        N: Ord,
+        T: Ord,
+    {
         self.0
             .iter()
             .filter_map(|(item, _follow)| {
@@ -187,7 +203,11 @@ impl ItemSet {
             .collect()
     }
 
-    pub fn next_terminals<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<TerminalIndex> {
+    pub fn next_terminals<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<TerminalIndex>
+    where
+        N: Ord,
+        T: Ord,
+    {
         self.0
             .iter()
             .filter_map(|(item, _follow)| {
@@ -200,7 +220,11 @@ impl ItemSet {
             .collect()
     }
 
-    pub fn finished<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<ItemRef> {
+    pub fn finished<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<ItemRef>
+    where
+        N: Ord,
+        T: Ord,
+    {
         self.0
             .iter()
             .filter_map(|(lr0item, follow)| {
@@ -217,7 +241,11 @@ impl ItemSet {
         &self,
         grammar: &Grammar<N, T>,
         nonterminal: NonterminalIndex,
-    ) -> ItemSet {
+    ) -> ItemSet
+    where
+        N: Ord,
+        T: Ord,
+    {
         ItemSet(
             self.0
                 .iter()
@@ -242,7 +270,11 @@ impl ItemSet {
         )
     }
 
-    pub fn go_terminal<N, T>(&self, grammar: &Grammar<N, T>, terminal: TerminalIndex) -> ItemSet {
+    pub fn go_terminal<N, T>(&self, grammar: &Grammar<N, T>, terminal: TerminalIndex) -> ItemSet
+    where
+        N: Ord,
+        T: Ord,
+    {
         ItemSet(
             self.0
                 .iter()

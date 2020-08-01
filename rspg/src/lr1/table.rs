@@ -4,9 +4,11 @@ use crate::grammar::NonterminalIndex;
 use crate::grammar::RuleIndex;
 use crate::grammar::TerminalIndex;
 use crate::utility::vec_with_size;
+use serde::Deserialize;
+use serde::Serialize;
 use std::fmt;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct State(pub(self) usize);
 
 impl fmt::Display for State {
@@ -15,14 +17,14 @@ impl fmt::Display for State {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Table {
     action: Vec<Vec<Action>>,   // indexed with TerminalIndex and State
     end_action: Vec<EndAction>, // indexed with State
     goto: Vec<Vec<Goto>>,       // indexed with NonterminalIndex and State
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Action {
     Reduce(RuleIndex),
     // reduce using rule
@@ -46,8 +48,8 @@ impl fmt::Display for Action {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for Action
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         match self {
@@ -67,7 +69,7 @@ impl Default for Action {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum EndAction {
     Reduce(RuleIndex),
     // reduce using rule
@@ -90,8 +92,8 @@ impl fmt::Display for EndAction {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for EndAction
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         match self {
@@ -111,7 +113,7 @@ impl Default for EndAction {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Goto {
     Goto(State),
     Error,
@@ -134,7 +136,11 @@ impl Default for Goto {
 
 impl Table {
     /// Create an empty(no state) table.
-    pub fn new<N, T>(grammar: &Grammar<N, T>) -> Table {
+    pub fn new<N, T>(grammar: &Grammar<N, T>) -> Table
+    where
+        N: Ord,
+        T: Ord,
+    {
         Table {
             action: vec_with_size(grammar.terminals_len(), Vec::new()),
             end_action: Vec::new(),
@@ -192,8 +198,8 @@ impl Table {
 
     pub fn pretty_table<N, T>(&self, grammar: &Grammar<N, T>, detailed: bool) -> prettytable::Table
     where
-        N: fmt::Display,
-        T: fmt::Debug,
+        N: fmt::Display + Ord,
+        T: fmt::Debug + Ord,
     {
         use prettytable::{Cell, Row};
         let mut table = prettytable::Table::new();

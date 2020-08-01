@@ -309,7 +309,7 @@ fn main() {
         let readline = rl.readline(">> ");
         match readline {
             Ok(line) => {
-                rl.add_history_entry(&line);
+                rl.add_history_entry(line.as_str());
                 let tokens = lambda::tokens(line.chars()).filter_map(|r| match r {
                     Ok(t) => {
                         trace!("parsed token: {:?}", t);

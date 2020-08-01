@@ -21,7 +21,8 @@ pub enum SymbolStackItem<Parsed, Token> {
 
 impl<N, T, Parsed, Token> DisplayWith<Grammar<N, T>> for SymbolStackItem<Parsed, Token>
 where
-    N: fmt::Display,
+    N: fmt::Display + Ord,
+    T: Ord,
     Token: fmt::Debug,
     Parsed: fmt::Debug,
 {
@@ -68,6 +69,8 @@ struct StackItem<Parsed, Token> {
 #[derive(Debug, Clone)]
 pub struct Parser<'t, 'g, N, Term, Token, Parsed, F, E>
 where
+    N: Ord,
+    Term: Ord,
     Token: token::Token<Term>,
     F: Fn(Reduce<Parsed, Token>) -> Result<Parsed, E>,
 {
@@ -104,7 +107,8 @@ impl<Parsed, Token> DerefMut for SymbolStackItemString<Parsed, Token> {
 
 impl<N, T, Parsed, Token> DisplayWith<Grammar<N, T>> for SymbolStackItemString<Parsed, Token>
 where
-    N: fmt::Display,
+    N: fmt::Display + Ord,
+    T: Ord,
     Token: fmt::Debug,
     Parsed: fmt::Debug,
 {
@@ -132,7 +136,8 @@ pub struct Reduce<Parsed, Token> {
 
 impl<N, T, Parsed, Token> DisplayWith<Grammar<N, T>> for Reduce<Parsed, Token>
 where
-    N: fmt::Display,
+    N: fmt::Display + Ord,
+    T: Ord,
     Token: fmt::Debug,
     Parsed: fmt::Debug,
 {
