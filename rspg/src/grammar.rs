@@ -4,8 +4,11 @@ use serde::Serialize;
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 use std::fmt;
+use std::iter;
+use std::ops;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::slice;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct NonterminalIndex(pub(self) usize);
@@ -254,22 +257,27 @@ where
         self.rules.len()
     }
 
-    pub fn nonterminals(&self) -> impl Iterator<Item = &N> {
-        self.nonterminals.iter().map(|entry| &entry.0)
+    pub fn nonterminals<'a>(
+        &self,
+    ) -> iter::Map<
+        slice::Iter<(N, std::vec::Vec<RuleIndex>)>,
+        fn(&(N, std::vec::Vec<RuleIndex>)) -> &N,
+    > {
+        fn mapper<N>(entry: &(N, Vec<RuleIndex>)) -> &N {
+            &entry.0
+        }
+        self.nonterminals.iter().map(mapper::<N>)
     }
 
-    pub fn terminals(&self) -> impl Iterator<Item = &T> {
+    pub fn terminals(&self) -> std::slice::Iter<T> {
         self.terminals.iter()
     }
 
-    pub fn rules(&self) -> impl Iterator<Item = &Rule> {
+    pub fn rules(&self) -> std::slice::Iter<Rule> {
         self.rules.iter()
     }
 
-    pub fn rules_with_left(
-        &self,
-        nonterminal: NonterminalIndex,
-    ) -> impl Iterator<Item = &RuleIndex> {
+    pub fn rules_with_left(&self, nonterminal: NonterminalIndex) -> std::slice::Iter<RuleIndex> {
         self.nonterminals[nonterminal.0].1.iter()
     }
 
@@ -285,15 +293,17 @@ where
         &self.rules[index.0]
     }
 
-    pub fn nonterminal_indices(&self) -> impl Iterator<Item = NonterminalIndex> {
+    pub fn nonterminal_indices(
+        &self,
+    ) -> iter::Map<ops::Range<usize>, fn(usize) -> NonterminalIndex> {
         (0..self.nonterminals.len()).map(NonterminalIndex)
     }
 
-    pub fn terminal_indices(&self) -> impl Iterator<Item = TerminalIndex> {
+    pub fn terminal_indices(&self) -> iter::Map<ops::Range<usize>, fn(usize) -> TerminalIndex> {
         (0..self.terminals.len()).map(TerminalIndex)
     }
 
-    pub fn rule_indices(&self) -> impl Iterator<Item = RuleIndex> {
+    pub fn rule_indices(&self) -> iter::Map<ops::Range<usize>, fn(usize) -> RuleIndex> {
         (0..self.rules.len()).map(RuleIndex)
     }
 }

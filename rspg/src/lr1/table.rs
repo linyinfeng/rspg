@@ -7,6 +7,8 @@ use crate::utility::vec_with_size;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt;
+use std::iter;
+use std::ops;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct State(pub(self) usize);
@@ -164,7 +166,7 @@ impl Table {
         self.end_action.len()
     }
 
-    pub fn states(&self) -> impl Iterator<Item = State> {
+    pub fn states(&self) -> iter::Map<ops::Range<usize>, fn(usize) -> State> {
         (0..self.state_len()).map(State)
     }
 
