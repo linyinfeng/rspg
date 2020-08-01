@@ -396,14 +396,14 @@ mod tests {
         assert_eq!(
             next_nonterminals1,
             [grammar.nonterminal_index(&"S")]
-                .into_iter()
+                .iter()
                 .cloned()
                 .collect()
         );
         assert_eq!(
             next_terminals1,
             [grammar.terminal_index(&'s')]
-                .into_iter()
+                .iter()
                 .cloned()
                 .collect()
         );
@@ -519,11 +519,11 @@ mod tests {
         assert_eq!(
             next_nonterminals2,
             [grammar.nonterminal_index(&"A")]
-                .into_iter()
+                .iter()
                 .cloned()
                 .collect()
         );
-        assert_eq!(next_terminals2, [].into_iter().cloned().collect());
+        assert_eq!(next_terminals2, [].iter().cloned().collect());
 
         let item_set4 = closure2.go_nonterminal(&grammar, grammar.nonterminal_index(&"A"));
         assert_eq!(item_set4, {
@@ -594,16 +594,16 @@ mod tests {
 
         let next_nonterminals3 = closure3.next_nonterminals(&grammar);
         let next_terminals3 = closure3.next_terminals(&grammar);
-        assert_eq!(next_nonterminals3, [].into_iter().cloned().collect());
-        assert_eq!(next_terminals3, [].into_iter().cloned().collect());
+        assert_eq!(next_nonterminals3, [].iter().cloned().collect());
+        assert_eq!(next_terminals3, [].iter().cloned().collect());
 
         let next_nonterminals4 = closure4.next_nonterminals(&grammar);
         let next_terminals4 = closure4.next_terminals(&grammar);
-        assert_eq!(next_nonterminals4, [].into_iter().cloned().collect());
+        assert_eq!(next_nonterminals4, [].iter().cloned().collect());
         assert_eq!(
             next_terminals4,
             [grammar.terminal_index(&'a')]
-                .into_iter()
+                .iter()
                 .cloned()
                 .collect()
         );
