@@ -11,6 +11,10 @@ use std::ops::DerefMut;
 pub struct NonterminalIndex(pub(self) usize);
 
 impl NonterminalIndex {
+    pub unsafe fn new(index: usize) -> Self {
+        Self(index)
+    }
+
     pub fn value(self) -> usize {
         self.0
     }
@@ -36,6 +40,10 @@ where
 pub struct TerminalIndex(pub(self) usize);
 
 impl TerminalIndex {
+    pub unsafe fn new(index: usize) -> Self {
+        Self(index)
+    }
+
     pub fn value(self) -> usize {
         self.0
     }
