@@ -1,0 +1,23 @@
+[package]
+name = "rspg-derive"
+version = "0.0.0"
+authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+rspg = { path = "../rspg" }
+syn = { version = "1", features = ["full", "extra-traits"] }
+quote = "1"
+proc-macro2 = "1"
+log = "0.4"
+serde = "1"
+ron = "0.6"
+
+[dev-dependencies]
+lazy_static = "1.4"
+log = "0.4"
+env_logger = "0.7"
+rustyline = "6.2"
