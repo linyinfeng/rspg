@@ -3,13 +3,15 @@ use crate::grammar::NonterminalIndex;
 use crate::grammar::TerminalIndex;
 use crate::grammar::{Grammar, Rule, Symbol};
 use crate::utility::vec_with_size;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fmt;
 
 /// A struct describing a FIRST set of something.
 ///
 /// A FIRST set contains a set of terminals and ε.
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FirstSet {
     pub terminals: BTreeSet<TerminalIndex>,
     pub can_be_empty: bool,
@@ -40,7 +42,8 @@ impl fmt::Display for FirstSet {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for FirstSet
 where
-    T: fmt::Debug,
+    N: Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "{{")?;
@@ -65,7 +68,7 @@ where
 }
 
 /// A struct describing the FIRST sets of every non-terminals of a grammar.
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FirstSets(Vec<FirstSet>);
 
 impl FirstSets {
@@ -114,7 +117,11 @@ impl FirstSets {
 
 impl FirstSets {
     /// Calculate the FIRST sets of every non-terminals of the `grammar`.
-    pub fn of_grammar<N, T>(grammar: &Grammar<N, T>) -> FirstSets {
+    pub fn of_grammar<N, T>(grammar: &Grammar<N, T>) -> FirstSets
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut sets = FirstSets(vec_with_size(
             grammar.nonterminals_len(),
             FirstSet {
@@ -131,7 +138,11 @@ impl FirstSets {
         sets
     }
 
-    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>) -> bool {
+    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>) -> bool
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut changed = false;
         for Rule { left, right } in grammar.rules() {
             let mut empty_count = 0;
@@ -192,8 +203,8 @@ impl FirstSets {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for FirstSets
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         for i in grammar.nonterminal_indices() {
@@ -215,7 +226,7 @@ where
 /// A struct describing a FOLLOW set of something.
 ///
 /// A FOLLOW set contains a set of terminals and $.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, Debug, Clone)]
 pub struct FollowSet {
     pub terminals: BTreeSet<TerminalIndex>,
     pub can_be_end: bool,
@@ -246,7 +257,8 @@ impl fmt::Display for FollowSet {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for FollowSet
 where
-    T: fmt::Debug,
+    N: Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "{{")?;
@@ -271,7 +283,7 @@ where
 }
 
 /// A struct describing the FOLLOW sets of every non-terminals of a grammar.
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FollowSets(Vec<FollowSet>);
 
 impl FollowSets {
@@ -316,7 +328,11 @@ impl FollowSets {
         sets
     }
 
-    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> bool {
+    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> bool
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut changed = false;
         for Rule { left, right } in grammar.rules() {
             for (index, symbol) in right.iter().enumerate() {
@@ -366,10 +382,14 @@ impl FollowSets {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for FollowSets
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
-    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error>
+    where
+        N: Ord,
+        T: Ord,
+    {
         for i in grammar.nonterminal_indices() {
             if i.value() != 0 {
                 writeln!(f)?;

@@ -1,3 +1,5 @@
+use serde::Deserialize;
+use serde::Serialize;
 use std::fmt;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -21,7 +23,7 @@ where
 }
 
 /// A token type whose terminal type is itself.
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
 pub struct TerminalToken<T>(pub T);
 
 impl<T> Deref for TerminalToken<T> {

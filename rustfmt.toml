@@ -9,5 +9,5 @@ reorder_impl_items = true # Unstable
 trailing_semicolon = false # Unstable
 use_field_init_shorthand = true
 use_try_shorthand = true
-format_doc_comments = true # Unstable
+# format_doc_comments = true # Unstable
 format_macro_bodies = false # Unstable

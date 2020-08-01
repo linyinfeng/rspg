@@ -18,7 +18,11 @@ use std::collections::BTreeSet;
 type ItemSetIndex = usize;
 
 #[derive(Debug, Clone)]
-pub struct Generator<N, T> {
+pub struct Generator<N, T>
+where
+    N: Ord,
+    T: Ord,
+{
     extended_grammar: Grammar<N, T>,
     canonical_collection_index: BTreeMap<ItemSet, ItemSetIndex>,
     canonical_collection: Vec<ItemSet>, // indexed with ItemSetIndex

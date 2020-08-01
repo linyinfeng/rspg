@@ -1,11 +1,13 @@
 use crate::display::DisplayWith;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct NonterminalIndex(pub(self) usize);
 
 impl NonterminalIndex {
@@ -22,14 +24,15 @@ impl fmt::Display for NonterminalIndex {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for NonterminalIndex
 where
-    N: fmt::Display,
+    N: fmt::Display + Ord,
+    T: Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "{}", grammar.nonterminal(*self))
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct TerminalIndex(pub(self) usize);
 
 impl TerminalIndex {
@@ -46,14 +49,15 @@ impl fmt::Display for TerminalIndex {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for TerminalIndex
 where
-    T: fmt::Debug,
+    N: Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "{:?}", grammar.terminal(*self))
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct RuleIndex(pub(self) usize);
 
 impl RuleIndex {
@@ -70,15 +74,15 @@ impl fmt::Display for RuleIndex {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for RuleIndex
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         write!(f, "{}", grammar.rule(*self).display_with(grammar))
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub enum Symbol {
     Nonterminal(NonterminalIndex),
     Terminal(TerminalIndex),
@@ -95,8 +99,8 @@ impl fmt::Display for Symbol {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for Symbol
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         match self {
@@ -106,7 +110,7 @@ where
     }
 }
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Default, Hash, Clone)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Debug, Default, Hash, Clone)]
 pub struct SymbolString(pub Vec<Symbol>);
 
 impl From<Vec<Symbol>> for SymbolString {
@@ -153,8 +157,8 @@ impl fmt::Display for SymbolString {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for SymbolString
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         if self.is_empty() {
@@ -171,7 +175,7 @@ where
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone)]
 pub struct Rule {
     pub left: NonterminalIndex,
     pub right: SymbolString,
@@ -188,8 +192,8 @@ impl fmt::Display for Rule {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for Rule
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         write!(f, "{}", self.left.display_with(grammar))?;
@@ -199,8 +203,12 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Grammar<N, T> {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Grammar<N, T>
+where
+    N: Ord,
+    T: Ord,
+{
     pub(self) nonterminals: Vec<(N, Vec<RuleIndex>)>,
     pub(self) terminals: Vec<T>,
     pub(self) rules: Vec<Rule>,
@@ -209,7 +217,11 @@ pub struct Grammar<N, T> {
     pub(self) terminal_index: BTreeMap<T, TerminalIndex>,
 }
 
-impl<N, T> Grammar<N, T> {
+impl<N, T> Grammar<N, T>
+where
+    N: Ord,
+    T: Ord,
+{
     pub fn start(&self) -> &N {
         self.nonterminal(self.start_index())
     }
@@ -277,6 +289,7 @@ impl<N, T> Grammar<N, T> {
 impl<N, T> Grammar<N, T>
 where
     N: Ord,
+    T: Ord,
 {
     pub fn nonterminal_index(&self, nonterminal: &N) -> NonterminalIndex {
         self.nonterminal_index[nonterminal]
@@ -289,6 +302,7 @@ where
 
 impl<N, T> Grammar<N, T>
 where
+    N: Ord,
     T: Ord,
 {
     pub fn terminal_index(&self, terminal: &T) -> TerminalIndex {
@@ -302,8 +316,8 @@ where
 
 impl<N, T> fmt::Display for Grammar<N, T>
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         writeln!(f, "grammar {{")?;
