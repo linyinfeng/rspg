@@ -309,7 +309,12 @@ fn unwrap_ident(i: &Ident) -> Ident {
 fn parser(content: &data::RspgContent) -> TokenStream {
     let token_type = &content.token.ty;
     let error_type = &content.error.ty;
-    let start_type = &content.nonterminals.iter().find(|n| n.ident.to_string() == content.start.nonterminal.to_string()).unwrap().ty;
+    let start_type = &content
+        .nonterminals
+        .iter()
+        .find(|n| n.ident.to_string() == content.start.nonterminal.to_string())
+        .unwrap()
+        .ty;
     let unwrap_start = unwrap_ident(&content.start.nonterminal);
     quote! {
         ::lazy_static::lazy_static! {
