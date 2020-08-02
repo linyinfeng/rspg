@@ -24,13 +24,6 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: set grcov environment variables
-        run: |
-          echo '::set-env CARGO_INCREMENTAL=0'
-          echo '::set-env RUSTFLAGS=-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
-          echo '::set-env RUSTDOCFLAGS=-Cpanic=abort'
-        if: ${{ matrix.rust == 'nightly' }}
-
       - uses: actions-rs/cargo@master
         with:
           command: build
@@ -50,12 +43,3 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
-
-      - id: coverage
-        uses: actions-rs/grcov@master
-        if: ${{ matrix.rust == 'nightly' }}
-
-      - uses: codecov/codecov-action@master
-        with:
-          file: ${{ steps.coverage.outputs.report }}
-        if: ${{ matrix.rust == 'nightly' }}
