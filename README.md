@@ -74,11 +74,13 @@ rspg! {
 
         nonterminal Abstraction: Term;
         // Value of a bare `Symbol` will be ignored.
-        rule Abstraction -> "lambda" (x: Variable) "." (t: Abstraction) => Ok(Term::Abstraction(x, Box::new(t)));
+        rule Abstraction -> "lambda" (x: Variable) "." (t: Abstraction) =>
+            Ok(Term::Abstraction(x, Box::new(t)));
         rule Abstraction -> (t: Application) => Ok(t);
 
         nonterminal Application: Term;
-        rule Application -> (t1: Application) (t2: Primary) => Ok(Term::Application(Box::new(t1), Box::new(t2)));
+        rule Application -> (t1: Application) (t2: Primary) =>
+            Ok(Term::Application(Box::new(t1), Box::new(t2)));
         rule Application -> (t: Primary) => Ok(t);
 
         nonterminal Primary: Term;

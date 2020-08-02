@@ -58,11 +58,13 @@ rspg! {
 
         nonterminal Abstraction: Term;
         // Value of a bare `Symbol` will be ignored.
-        rule Abstraction -> "lambda" (x: Variable) "." (t: Abstraction) => Ok(Term::Abstraction(x, Box::new(t)));
+        rule Abstraction -> "lambda" (x: Variable) "." (t: Abstraction) =>
+            Ok(Term::Abstraction(x, Box::new(t)));
         rule Abstraction -> (t: Application) => Ok(t);
 
         nonterminal Application: Term;
-        rule Application -> (t1: Application) (t2: Primary) => Ok(Term::Application(Box::new(t1), Box::new(t2)));
+        rule Application -> (t1: Application) (t2: Primary) =>
+            Ok(Term::Application(Box::new(t1), Box::new(t2)));
         rule Application -> (t: Primary) => Ok(t);
 
         nonterminal Primary: Term;
@@ -77,7 +79,8 @@ rspg! {
 fn main() {
     env_logger::init();
 
-    // rspg! { ... } defines some static variables, type `Parsed`, function `parse` and `reduce` in the mod `lambda`.
+    // rspg! { ... } defines some static variables, type `Parsed`, function
+    // `parse` and `reduce` in the mod `lambda`.
     // Use cargo doc or expand the macro to see the documents.
     info!("{}", *lambda::GRAMMAR);
     info!(
