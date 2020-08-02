@@ -1,8 +1,8 @@
 # rspg
 
-![CI](https://github.com/linyinfeng/rspg/workflows/CI/badge.svg)
-![crates.io](https://img.shields.io/crates/v/rspg.svg)
-![docs.rs](https://docs.rs/rspg/badge.svg)
+[![CI](https://github.com/linyinfeng/rspg/workflows/CI/badge.svg)](https://github.com/linyinfeng/rspg/actions)
+[![crates.io](https://img.shields.io/crates/v/rspg.svg)](https://crates.io/crates/rspg)
+[![docs.rs](https://docs.rs/rspg/badge.svg)](https://docs.rs/rspg)
 
 A simple **experimental** LR(1) rust parser generator library for syntactic analysis learning.
 
