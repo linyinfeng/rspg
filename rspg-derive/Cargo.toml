@@ -3,6 +3,8 @@ name = "rspg-derive"
 version = "0.0.0"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/linyinfeng/rspg-derive"
 
 [lib]
 proc-macro = true
