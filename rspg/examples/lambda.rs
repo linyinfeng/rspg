@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use log::{debug, error, info, trace};
 use rspg::display::DisplayWith;
 use rustyline::error::ReadlineError;
@@ -86,19 +88,14 @@ mod lambda {
     {
         fn match_variable(&mut self) -> String {
             let mut name = String::new();
-            loop {
-                match self.input.peek() {
-                    Some(c) => {
-                        let c = *c;
-                        match c {
-                            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
-                                self.input.next();
-                                name.push(c);
-                            }
-                            _ => break,
-                        }
+            while let Some(c) = self.input.peek() {
+                let c = *c;
+                match c {
+                    'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
+                        self.input.next();
+                        name.push(c);
                     }
-                    None => break,
+                    _ => break,
                 }
             }
             if name.is_empty() {
