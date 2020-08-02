@@ -325,7 +325,7 @@ fn parser(content: &data::RspgContent) -> TokenStream {
                 String,
                 #token_type,
                 Parsed,
-                fn(::rspg::lr1::parser::Reduce<Parsed, Token>) -> Result<Parsed, #error_type>,
+                fn(::rspg::lr1::parser::Reduce<Parsed, #token_type>) -> Result<Parsed, #error_type>,
                 #error_type,
             > = ::rspg::lr1::parser::Parser {
                 grammar: &GRAMMAR,
@@ -337,7 +337,7 @@ fn parser(content: &data::RspgContent) -> TokenStream {
 
         pub fn parse<I>(input: I) -> Result<#start_type, ::rspg::lr1::parser::Error<#error_type>>
         where
-            I: Iterator<Item = Token>,
+            I: Iterator<Item = #token_type>,
         {
             PARSER.parse(input).map(Parsed::#unwrap_start)
         }
