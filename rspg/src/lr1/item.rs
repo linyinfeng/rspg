@@ -7,6 +7,7 @@ use crate::lr0;
 use crate::set::FirstSet;
 use crate::set::FirstSets;
 use crate::set::FollowSet;
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fmt;
@@ -57,13 +58,10 @@ where
             if i != 0 {
                 write!(f, " ")?;
             }
-            if i < self.lr0item.location {
-                write!(f, "{}", rule.right[i].display_with(grammar))?;
-            } else if i == self.lr0item.location {
-                write!(f, "·")?;
-            } else {
-                // i > self.lr0item.location
-                write!(f, "{}", rule.right[i - 1].display_with(grammar))?;
+            match i.cmp(&self.lr0item.location) {
+                Ordering::Less => write!(f, "{}", rule.right[i].display_with(grammar))?,
+                Ordering::Equal => write!(f, "·")?,
+                Ordering::Greater => write!(f, "{}", rule.right[i - 1].display_with(grammar))?,
             }
         }
         write!(f, ", ")?;

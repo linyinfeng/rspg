@@ -24,7 +24,7 @@ pub fn rspg(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             #contents
         }
     };
-    return result.into();
+    result.into()
 }
 
 fn build_contents(content: data::RspgContent) -> TokenStream {
@@ -115,7 +115,8 @@ where
     T: serde::Serialize,
 {
     let ident = Ident::new(name, Span::call_site());
-    let string = ron::ser::to_string(data).expect(&format!("failed to serialize data {}", name));
+    let string =
+        ron::ser::to_string(data).unwrap_or_else(|_| panic!("failed to serialize data {}", name));
     quote! {
         ::lazy_static::lazy_static! {
             pub static ref #ident: #ty = ::ron::de::from_str(#string).unwrap();
@@ -123,7 +124,7 @@ where
     }
 }
 
-fn parsed_type(nonterminals: &Vec<data::NonterminalDescription>) -> TokenStream {
+fn parsed_type(nonterminals: &[data::NonterminalDescription]) -> TokenStream {
     let mut result = TokenStream::new();
 
     let idents = nonterminals.iter().map(|d| &d.ident);
@@ -162,7 +163,7 @@ fn parsed_type(nonterminals: &Vec<data::NonterminalDescription>) -> TokenStream 
 fn token_impl(
     grammar: &rspg::grammar::Grammar<String, String>,
     token: &data::TokenDescription,
-    terminals: &Vec<data::TerminalDescription>,
+    terminals: &[data::TerminalDescription],
 ) -> TokenStream {
     let ty = &token.ty;
     let lits = terminals.iter().map(|d| &d.lit);

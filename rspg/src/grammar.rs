@@ -14,6 +14,9 @@ use std::slice;
 pub struct NonterminalIndex(pub(self) usize);
 
 impl NonterminalIndex {
+    /// # Safety
+    ///
+    /// This function is memory safe but can create invalid index for a grammar.
     pub unsafe fn new(index: usize) -> Self {
         Self(index)
     }
@@ -43,6 +46,9 @@ where
 pub struct TerminalIndex(pub(self) usize);
 
 impl TerminalIndex {
+    /// # Safety
+    ///
+    /// This function is memory safe but can create invalid index for a grammar.
     pub unsafe fn new(index: usize) -> Self {
         Self(index)
     }
@@ -72,6 +78,9 @@ where
 pub struct RuleIndex(pub(self) usize);
 
 impl RuleIndex {
+    /// # Safety
+    ///
+    /// This function is memory safe but can create invalid index for a grammar.
     pub unsafe fn new(index: usize) -> Self {
         Self(index)
     }
@@ -257,7 +266,8 @@ where
         self.rules.len()
     }
 
-    pub fn nonterminals<'a>(
+    #[allow(clippy::type_complexity)]
+    pub fn nonterminals(
         &self,
     ) -> iter::Map<
         slice::Iter<(N, std::vec::Vec<RuleIndex>)>,

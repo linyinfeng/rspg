@@ -4,6 +4,7 @@ use crate::grammar::RuleIndex;
 use crate::grammar::Symbol;
 use serde::Deserialize;
 use serde::Serialize;
+use std::cmp::Ordering;
 use std::fmt;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
@@ -44,13 +45,10 @@ where
             if i != 0 {
                 write!(f, " ")?;
             }
-            if i < self.location {
-                write!(f, "{}", rule.right[i].display_with(grammar))?;
-            } else if i == self.location {
-                write!(f, "·")?;
-            } else {
-                // if i > self.location
-                write!(f, "{}", rule.right[i - 1].display_with(grammar))?;
+            match i.cmp(&self.location) {
+                Ordering::Less => write!(f, "{}", rule.right[i].display_with(grammar))?,
+                Ordering::Equal => write!(f, "·")?,
+                Ordering::Greater => write!(f, "{}", rule.right[i - 1].display_with(grammar))?,
             }
         }
         write!(f, "]")?;
