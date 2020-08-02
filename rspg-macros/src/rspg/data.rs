@@ -58,10 +58,7 @@ impl Parse for Rule {
             arrow: input.parse()?,
             right: {
                 let mut string = Vec::new();
-                while {
-                    let lookahead = input.lookahead1();
-                    !lookahead.peek(Token![=>])
-                } {
+                while !input.lookahead1().peek(Token![=>]) {
                     string.push(input.parse()?);
                 }
                 string
