@@ -27,8 +27,8 @@ jobs:
       - name: set grcov environment variables
         run: |
           echo '::set-env CARGO_INCREMENTAL=0'
-          echo '::set-env RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"'
-          echo '::set-env RUSTDOCFLAGS="-Cpanic=abort"'
+          echo '::set-env RUSTFLAGS=-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+          echo '::set-env RUSTDOCFLAGS=-Cpanic=abort'
         if: ${{ matrix.rust == 'nightly' }}
 
       - uses: actions-rs/cargo@master
