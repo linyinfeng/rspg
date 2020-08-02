@@ -312,7 +312,7 @@ fn parser(content: &data::RspgContent) -> TokenStream {
     let start_type = &content
         .nonterminals
         .iter()
-        .find(|n| n.ident.to_string() == content.start.nonterminal.to_string())
+        .find(|n| n.ident == content.start.nonterminal)
         .unwrap()
         .ty;
     let unwrap_start = unwrap_ident(&content.start.nonterminal);
