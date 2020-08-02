@@ -3,8 +3,12 @@ name = "rspg"
 version = "0.0.0"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
 edition = "2018"
+description = "Simple parser generator library"
 license = "MIT"
 repository = "https://github.com/linyinfeng/rspg"
+keywords = ["parser", "generator", "LR", "grammar"]
+categories = ["parsing"]
+readme = "README.md"
 
 [dependencies]
 prettytable-rs = "0.8"

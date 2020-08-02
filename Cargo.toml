@@ -1,5 +1,5 @@
 [workspace]
 members = [
     "rspg",
-    "rspg-derive",
+    "rspg-macros",
 ]

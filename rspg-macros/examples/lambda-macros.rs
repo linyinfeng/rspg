@@ -3,7 +3,7 @@ use log::error;
 use log::info;
 use log::trace;
 use rspg::display::DisplayWith;
-use rspg_derive::rspg;
+use rspg_macros::rspg;
 use rustyline::error::ReadlineError;
 use std::env;
 use std::fmt;

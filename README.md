@@ -14,5 +14,5 @@ A simple **experimental** rust parser generator library for syntactic analysis l
 - [ ] Tests
 - [ ] Documentation
 - [x] Basic ability to use LR(1) parse result
-- [x] rspg-derive
+- [x] rspg-macros
 - [ ] ...

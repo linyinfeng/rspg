@@ -1,10 +1,13 @@
 [package]
-name = "rspg-derive"
+name = "rspg-macros"
 version = "0.0.0"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
 edition = "2018"
 license = "MIT"
-repository = "https://github.com/linyinfeng/rspg-derive"
+repository = "https://github.com/linyinfeng/rspg"
+keywords = ["parser", "generator", "LR", "grammar"]
+categories = ["parsing"]
+readme = "README.md"
 
 [lib]
 proc-macro = true
