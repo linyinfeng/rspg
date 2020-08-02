@@ -4,6 +4,7 @@ version = "0.0.0"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
 edition = "2018"
 license = "MIT"
+homepage = "https://github.com/linyinfeng/rspg"
 repository = "https://github.com/linyinfeng/rspg"
 keywords = ["parser", "generator", "LR", "grammar"]
 categories = ["parsing"]

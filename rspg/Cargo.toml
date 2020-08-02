@@ -5,6 +5,7 @@ authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
 edition = "2018"
 description = "Simple parser generator library"
 license = "MIT"
+homepage = "https://github.com/linyinfeng/rspg"
 repository = "https://github.com/linyinfeng/rspg"
 keywords = ["parser", "generator", "LR", "grammar"]
 categories = ["parsing"]
