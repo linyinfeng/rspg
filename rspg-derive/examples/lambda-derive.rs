@@ -184,7 +184,7 @@ rspg! {
 
 fn main() {
     let mut builder = env_logger::builder();
-    builder.filter_module("lambda", log::LevelFilter::Trace);
+    builder.filter_module("lambda_derive", log::LevelFilter::Trace);
     if env::var("RUST_LOG").is_ok() {
         builder.parse_filters(&env::var("RUST_LOG").unwrap());
     }
@@ -223,9 +223,9 @@ fn main() {
                         None
                     }
                 });
-                match lambda::PARSER.parse(tokens) {
+                match lambda::parse(tokens) {
                     Ok(p) => {
-                        let p = p.unwrap_term();
+                        let p = p;
                         debug!("result: {:#?}", p);
                         println!("{}", p);
                     }

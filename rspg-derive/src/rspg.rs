@@ -41,7 +41,7 @@ fn build_contents(content: data::RspgContent) -> TokenStream {
     let rules: Vec<_> = grammar.rule_indices().collect();
     result.extend(embed_data(
         "RULES",
-        quote!(::std::vec::Vec<::rspg::grammar::RuleIndex>),
+        quote!(Vec<::rspg::grammar::RuleIndex>),
         &rules,
     ));
     let first_sets = rspg::set::FirstSets::of_grammar(&grammar);
@@ -212,7 +212,7 @@ fn reducer(
     let rule_index_values = grammar.rule_indices().map(rspg::grammar::RuleIndex::value);
 
     let error_type = &content.error.ty;
-    let result_type = quote! {::std::result::Result<Parsed, #error_type>};
+    let result_type = quote! {Result<Parsed, #error_type>};
     let terminal_map = content
         .terminals
         .iter()
@@ -309,6 +309,8 @@ fn unwrap_ident(i: &Ident) -> Ident {
 fn parser(content: &data::RspgContent) -> TokenStream {
     let token_type = &content.token.ty;
     let error_type = &content.error.ty;
+    let start_type = &content.nonterminals.iter().find(|n| n.ident.to_string() == content.start.nonterminal.to_string()).unwrap().ty;
+    let unwrap_start = unwrap_ident(&content.start.nonterminal);
     quote! {
         ::lazy_static::lazy_static! {
             pub static ref PARSER: ::rspg::lr1::parser::Parser<
@@ -326,6 +328,13 @@ fn parser(content: &data::RspgContent) -> TokenStream {
                 reducer,
                 phantom: ::std::marker::PhantomData,
             };
+        }
+
+        pub fn parse<I>(input: I) -> Result<#start_type, ::rspg::lr1::parser::Error<#error_type>>
+        where
+            I: Iterator<Item = Token>,
+        {
+            PARSER.parse(input).map(Parsed::#unwrap_start)
         }
     }
 }
