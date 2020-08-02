@@ -1,0 +1,43 @@
+
+name: CI
+on: push
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      matrix:
+        rust: [stable, beta]
+        experimental: [false]
+        include:
+          - rust: nightly
+            experimental: true
+
+    steps:
+      - uses: actions/checkout@master
+
+      - uses: actions-rs/toolchain@master
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          components: rustfmt, clippy
+
+      - uses: actions-rs/cargo@master
+        with:
+          command: build --tests --examples
+
+      - uses: actions-rs/cargo@master
+        with:
+          command: test --workspace
+
+      - uses: actions-rs/cargo@master
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - uses: actions-rs/cargo@master
+        with:
+          command: clippy
+          args: -- -D warnings
