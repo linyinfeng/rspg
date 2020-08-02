@@ -1,0 +1,27 @@
+[package]
+name = "rspg-examples"
+version = "0.0.0"
+authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
+edition = "2018"
+publish = false
+
+[[bin]]
+name = "lambda"
+path = "src/lambda/main.rs"
+
+[[bin]]
+name = "lambda-macros"
+path = "src/lambda-macros/main.rs"
+
+[[bin]]
+name = "simple-calculator"
+path = "src/simple-calculator/main.rs"
+
+[dependencies]
+rspg = { path = "../rspg" }
+rspg-macros = { path = "../rspg-macros" }
+lazy_static = "1.4.0"
+log = "0.4.11"
+env_logger = "0.7.1"
+rustyline = "6.2.0"
+ron = "0.6.0"

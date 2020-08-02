@@ -1,14 +1,26 @@
 use crate::display::DisplayWith;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 use std::fmt;
+use std::iter;
+use std::ops;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::slice;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct NonterminalIndex(pub(self) usize);
 
 impl NonterminalIndex {
+    /// # Safety
+    ///
+    /// This function is memory safe but can create invalid index for a grammar.
+    pub unsafe fn new(index: usize) -> Self {
+        Self(index)
+    }
+
     pub fn value(self) -> usize {
         self.0
     }
@@ -22,17 +34,25 @@ impl fmt::Display for NonterminalIndex {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for NonterminalIndex
 where
-    N: fmt::Display,
+    N: fmt::Display + Ord,
+    T: Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "{}", grammar.nonterminal(*self))
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct TerminalIndex(pub(self) usize);
 
 impl TerminalIndex {
+    /// # Safety
+    ///
+    /// This function is memory safe but can create invalid index for a grammar.
+    pub unsafe fn new(index: usize) -> Self {
+        Self(index)
+    }
+
     pub fn value(self) -> usize {
         self.0
     }
@@ -46,17 +66,25 @@ impl fmt::Display for TerminalIndex {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for TerminalIndex
 where
-    T: fmt::Debug,
+    N: Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "{:?}", grammar.terminal(*self))
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct RuleIndex(pub(self) usize);
 
 impl RuleIndex {
+    /// # Safety
+    ///
+    /// This function is memory safe but can create invalid index for a grammar.
+    pub unsafe fn new(index: usize) -> Self {
+        Self(index)
+    }
+
     pub fn value(self) -> usize {
         self.0
     }
@@ -70,15 +98,15 @@ impl fmt::Display for RuleIndex {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for RuleIndex
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         write!(f, "{}", grammar.rule(*self).display_with(grammar))
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub enum Symbol {
     Nonterminal(NonterminalIndex),
     Terminal(TerminalIndex),
@@ -95,8 +123,8 @@ impl fmt::Display for Symbol {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for Symbol
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         match self {
@@ -106,7 +134,7 @@ where
     }
 }
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Default, Hash, Clone)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, Debug, Default, Hash, Clone)]
 pub struct SymbolString(pub Vec<Symbol>);
 
 impl From<Vec<Symbol>> for SymbolString {
@@ -138,7 +166,7 @@ impl SymbolString {
 impl fmt::Display for SymbolString {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         if self.is_empty() {
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         } else {
             for (i, symbol) in self.iter().enumerate() {
                 if i != 0 {
@@ -153,12 +181,12 @@ impl fmt::Display for SymbolString {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for SymbolString
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         if self.is_empty() {
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         } else {
             for (i, symbol) in self.iter().enumerate() {
                 if i != 0 {
@@ -171,7 +199,7 @@ where
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone)]
 pub struct Rule {
     pub left: NonterminalIndex,
     pub right: SymbolString,
@@ -188,8 +216,8 @@ impl fmt::Display for Rule {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for Rule
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         write!(f, "{}", self.left.display_with(grammar))?;
@@ -199,8 +227,12 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Grammar<N, T> {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Grammar<N, T>
+where
+    N: Ord,
+    T: Ord,
+{
     pub(self) nonterminals: Vec<(N, Vec<RuleIndex>)>,
     pub(self) terminals: Vec<T>,
     pub(self) rules: Vec<Rule>,
@@ -209,7 +241,11 @@ pub struct Grammar<N, T> {
     pub(self) terminal_index: BTreeMap<T, TerminalIndex>,
 }
 
-impl<N, T> Grammar<N, T> {
+impl<N, T> Grammar<N, T>
+where
+    N: Ord,
+    T: Ord,
+{
     pub fn start(&self) -> &N {
         self.nonterminal(self.start_index())
     }
@@ -230,22 +266,28 @@ impl<N, T> Grammar<N, T> {
         self.rules.len()
     }
 
-    pub fn nonterminals(&self) -> impl Iterator<Item = &N> {
-        self.nonterminals.iter().map(|entry| &entry.0)
+    #[allow(clippy::type_complexity)]
+    pub fn nonterminals(
+        &self,
+    ) -> iter::Map<
+        slice::Iter<(N, std::vec::Vec<RuleIndex>)>,
+        fn(&(N, std::vec::Vec<RuleIndex>)) -> &N,
+    > {
+        fn mapper<N>(entry: &(N, Vec<RuleIndex>)) -> &N {
+            &entry.0
+        }
+        self.nonterminals.iter().map(mapper::<N>)
     }
 
-    pub fn terminals(&self) -> impl Iterator<Item = &T> {
+    pub fn terminals(&self) -> std::slice::Iter<T> {
         self.terminals.iter()
     }
 
-    pub fn rules(&self) -> impl Iterator<Item = &Rule> {
+    pub fn rules(&self) -> std::slice::Iter<Rule> {
         self.rules.iter()
     }
 
-    pub fn rules_with_left(
-        &self,
-        nonterminal: NonterminalIndex,
-    ) -> impl Iterator<Item = &RuleIndex> {
+    pub fn rules_with_left(&self, nonterminal: NonterminalIndex) -> std::slice::Iter<RuleIndex> {
         self.nonterminals[nonterminal.0].1.iter()
     }
 
@@ -261,15 +303,17 @@ impl<N, T> Grammar<N, T> {
         &self.rules[index.0]
     }
 
-    pub fn nonterminal_indices(&self) -> impl Iterator<Item = NonterminalIndex> {
+    pub fn nonterminal_indices(
+        &self,
+    ) -> iter::Map<ops::Range<usize>, fn(usize) -> NonterminalIndex> {
         (0..self.nonterminals.len()).map(NonterminalIndex)
     }
 
-    pub fn terminal_indices(&self) -> impl Iterator<Item = TerminalIndex> {
+    pub fn terminal_indices(&self) -> iter::Map<ops::Range<usize>, fn(usize) -> TerminalIndex> {
         (0..self.terminals.len()).map(TerminalIndex)
     }
 
-    pub fn rule_indices(&self) -> impl Iterator<Item = RuleIndex> {
+    pub fn rule_indices(&self) -> iter::Map<ops::Range<usize>, fn(usize) -> RuleIndex> {
         (0..self.rules.len()).map(RuleIndex)
     }
 }
@@ -277,6 +321,7 @@ impl<N, T> Grammar<N, T> {
 impl<N, T> Grammar<N, T>
 where
     N: Ord,
+    T: Ord,
 {
     pub fn nonterminal_index(&self, nonterminal: &N) -> NonterminalIndex {
         self.nonterminal_index[nonterminal]
@@ -289,6 +334,7 @@ where
 
 impl<N, T> Grammar<N, T>
 where
+    N: Ord,
     T: Ord,
 {
     pub fn terminal_index(&self, terminal: &T) -> TerminalIndex {
@@ -302,8 +348,8 @@ where
 
 impl<N, T> fmt::Display for Grammar<N, T>
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         writeln!(f, "grammar {{")?;
@@ -414,7 +460,7 @@ where
                 let new_index = NonterminalIndex(self.nonterminals.len());
                 self.nonterminals.push((nonterminal, Vec::new()));
                 *v.insert(new_index)
-            },
+            }
             Entry::Occupied(o) => *o.get(),
         }
     }
@@ -425,7 +471,7 @@ where
                 let new_index = TerminalIndex(self.terminals.len());
                 self.terminals.push(terminal);
                 *v.insert(new_index)
-            },
+            }
             Entry::Occupied(o) => *o.get(),
         }
     }
@@ -454,10 +500,10 @@ mod tests {
             start E;
             rule E -> T, E1;
             rule E1 -> "+", T, E1;
-            rule E1 -> ε;
+            rule E1 -> epsilon;
             rule T -> F, T1;
             rule T1 -> "*", F, T1;
-            rule T1 -> ε;
+            rule T1 -> epsilon;
             rule F -> "(", E, ")";
             rule F -> "id";
             rule F -> "(", ")";
@@ -499,10 +545,10 @@ mod tests {
             &[
                 r#"E -> T E1"#,
                 r#"E1 -> "+" T E1"#,
-                r#"E1 -> ε"#,
+                r#"E1 -> epsilon"#,
                 r#"T -> F T1"#,
                 r#"T1 -> "*" F T1"#,
-                r#"T1 -> ε"#,
+                r#"T1 -> epsilon"#,
                 r#"F -> "(" E ")""#,
                 r#"F -> "id""#,
                 r#"F -> "(" ")""#,
@@ -522,7 +568,7 @@ mod tests {
                 .map(|r| r.display_with(&grammar))
                 .map(|mix| mix.to_string())
                 .collect::<Vec<_>>(),
-            &[r#"E1 -> "+" T E1"#, r#"E1 -> ε"#,]
+            &[r#"E1 -> "+" T E1"#, r#"E1 -> epsilon"#,]
         );
         assert_eq!(
             grammar
@@ -538,7 +584,7 @@ mod tests {
                 .map(|r| r.display_with(&grammar))
                 .map(|mix| mix.to_string())
                 .collect::<Vec<_>>(),
-            &[r#"T1 -> "*" F T1"#, r#"T1 -> ε"#,]
+            &[r#"T1 -> "*" F T1"#, r#"T1 -> epsilon"#,]
         );
         assert_eq!(
             grammar
@@ -583,10 +629,10 @@ grammar {
     start E
     rule 0: E -> T E1
     rule 1: E1 -> "+" T E1
-    rule 2: E1 -> ε
+    rule 2: E1 -> epsilon
     rule 3: T -> F T1
     rule 4: T1 -> "*" F T1
-    rule 5: T1 -> ε
+    rule 5: T1 -> epsilon
     rule 6: F -> "(" E ")"
     rule 7: F -> "id"
     rule 8: F -> "(" ")"
@@ -603,10 +649,10 @@ grammar {
             &[
                 "N0 -> N1 N2",
                 "N2 -> t0 N1 N2",
-                "N2 -> ε",
+                "N2 -> epsilon",
                 "N1 -> N3 N4",
                 "N4 -> t1 N3 N4",
-                "N4 -> ε",
+                "N4 -> epsilon",
                 "N3 -> t2 N0 t3",
                 "N3 -> t4",
                 "N3 -> t2 t3",
@@ -630,10 +676,10 @@ grammar {
     start E'
     rule 0: E -> T E1
     rule 1: E1 -> "+" T E1
-    rule 2: E1 -> ε
+    rule 2: E1 -> epsilon
     rule 3: T -> F T1
     rule 4: T1 -> "*" F T1
-    rule 5: T1 -> ε
+    rule 5: T1 -> epsilon
     rule 6: F -> "(" E ")"
     rule 7: F -> "id"
     rule 8: F -> "(" ")"

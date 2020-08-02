@@ -21,7 +21,8 @@ pub enum SymbolStackItem<Parsed, Token> {
 
 impl<N, T, Parsed, Token> DisplayWith<Grammar<N, T>> for SymbolStackItem<Parsed, Token>
 where
-    N: fmt::Display,
+    N: fmt::Display + Ord,
+    T: Ord,
     Token: fmt::Debug,
     Parsed: fmt::Debug,
 {
@@ -29,7 +30,7 @@ where
         match self {
             SymbolStackItem::Nonterminal(n, p) => {
                 write!(f, "{}{{{:?}}}", n.display_with(grammar), p)
-            },
+            }
             SymbolStackItem::Token(t) => write!(f, "{:?}", t),
         }
     }
@@ -68,6 +69,8 @@ struct StackItem<Parsed, Token> {
 #[derive(Debug, Clone)]
 pub struct Parser<'t, 'g, N, Term, Token, Parsed, F, E>
 where
+    N: Ord,
+    Term: Ord,
     Token: token::Token<Term>,
     F: Fn(Reduce<Parsed, Token>) -> Result<Parsed, E>,
 {
@@ -104,13 +107,14 @@ impl<Parsed, Token> DerefMut for SymbolStackItemString<Parsed, Token> {
 
 impl<N, T, Parsed, Token> DisplayWith<Grammar<N, T>> for SymbolStackItemString<Parsed, Token>
 where
-    N: fmt::Display,
+    N: fmt::Display + Ord,
+    T: Ord,
     Token: fmt::Debug,
     Parsed: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         if self.is_empty() {
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         } else {
             for (i, item) in self.iter().enumerate() {
                 if i != 0 {
@@ -132,7 +136,8 @@ pub struct Reduce<Parsed, Token> {
 
 impl<N, T, Parsed, Token> DisplayWith<Grammar<N, T>> for Reduce<Parsed, Token>
 where
-    N: fmt::Display,
+    N: fmt::Display + Ord,
+    T: Ord,
     Token: fmt::Debug,
     Parsed: fmt::Debug,
 {
@@ -156,7 +161,7 @@ pub enum Error<E> {
 
 impl<'t, 'g, N, Term, Token, Parsed, F, E> Parser<'t, 'g, N, Term, Token, Parsed, F, E>
 where
-    N: Ord + Copy,
+    N: Ord,
     Term: Ord,
     Token: token::Token<Term>,
     F: Fn(Reduce<Parsed, Token>) -> Result<Parsed, E>,
@@ -175,7 +180,7 @@ where
 
             match input.peek() {
                 Some(token) => {
-                    let terminal = self.grammar.terminal_index(&token.terminal());
+                    let terminal = token.terminal_index(self.grammar);
                     let action = Some(self.table.action(state, terminal));
                     match action.expect("token can not match any terminals") {
                         Action::Error => return Err(Error::NoAction),
@@ -185,13 +190,13 @@ where
                                 state,
                                 symbol: Some(SymbolStackItem::Token(token)),
                             });
-                        },
+                        }
                         Action::Reduce(rule) => match self.reduce(&mut stack, rule) {
                             Ok(()) => (),
                             Err(e) => return Err(e),
                         },
                     }
-                },
+                }
                 None => match self.table.end_action(state) {
                     EndAction::Error => return Err(Error::NoEndAction),
                     EndAction::Accept => {
@@ -199,17 +204,17 @@ where
                             match stack.pop().unwrap().symbol.unwrap() {
                                 SymbolStackItem::Nonterminal(nonterminal, parsed) => {
                                     if nonterminal == self.grammar.start_index() {
-                                        return Ok(parsed)
+                                        return Ok(parsed);
                                     } else {
-                                        return Err(Error::NotAcceptOnStart)
+                                        return Err(Error::NotAcceptOnStart);
                                     }
-                                },
+                                }
                                 SymbolStackItem::Token(_) => return Err(Error::IncompleteAccept),
                             }
                         } else {
-                            return Err(Error::IncompleteAccept)
+                            return Err(Error::IncompleteAccept);
                         }
-                    },
+                    }
                     EndAction::Reduce(rule) => match self.reduce(&mut stack, rule) {
                         Ok(()) => (),
                         Err(e) => return Err(e),
@@ -250,10 +255,10 @@ where
                             symbol: Some(SymbolStackItem::Nonterminal(rule.left, reduced)),
                         });
                         Ok(())
-                    },
+                    }
                     Goto::Error => Err(Error::NoGoto),
                 }
-            },
+            }
             Err(e) => Err(Error::Reduce(e)),
         }
     }

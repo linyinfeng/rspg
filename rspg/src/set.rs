@@ -3,13 +3,15 @@ use crate::grammar::NonterminalIndex;
 use crate::grammar::TerminalIndex;
 use crate::grammar::{Grammar, Rule, Symbol};
 use crate::utility::vec_with_size;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fmt;
 
 /// A struct describing a FIRST set of something.
 ///
-/// A FIRST set contains a set of terminals and ε.
-#[derive(Debug, Clone)]
+/// A FIRST set contains a set of terminals and epsilon.
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FirstSet {
     pub terminals: BTreeSet<TerminalIndex>,
     pub can_be_empty: bool,
@@ -31,7 +33,7 @@ impl fmt::Display for FirstSet {
             if i != 0usize {
                 write!(f, ", ")?;
             }
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         }
         write!(f, "}}")?;
         Ok(())
@@ -40,7 +42,8 @@ impl fmt::Display for FirstSet {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for FirstSet
 where
-    T: fmt::Debug,
+    N: Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "{{")?;
@@ -57,7 +60,7 @@ where
             if i != 0usize {
                 write!(f, ", ")?;
             }
-            write!(f, "ε")?;
+            write!(f, "epsilon")?;
         }
         write!(f, "}}")?;
         Ok(())
@@ -65,7 +68,7 @@ where
 }
 
 /// A struct describing the FIRST sets of every non-terminals of a grammar.
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FirstSets(Vec<FirstSet>);
 
 impl FirstSets {
@@ -96,13 +99,13 @@ impl FirstSets {
                     if set.can_be_empty {
                         empty_count += 1;
                     } else {
-                        break
+                        break;
                     }
-                },
+                }
                 Symbol::Terminal(t) => {
                     first_set.terminals.insert(*t);
-                    break
-                },
+                    break;
+                }
             }
         }
         if empty_count == symbol_string.len() {
@@ -114,7 +117,11 @@ impl FirstSets {
 
 impl FirstSets {
     /// Calculate the FIRST sets of every non-terminals of the `grammar`.
-    pub fn of_grammar<N, T>(grammar: &Grammar<N, T>) -> FirstSets {
+    pub fn of_grammar<N, T>(grammar: &Grammar<N, T>) -> FirstSets
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut sets = FirstSets(vec_with_size(
             grammar.nonterminals_len(),
             FirstSet {
@@ -125,13 +132,17 @@ impl FirstSets {
         loop {
             if !sets.iteration(&grammar) {
                 // if not changed
-                break
+                break;
             }
         }
         sets
     }
 
-    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>) -> bool {
+    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>) -> bool
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut changed = false;
         for Rule { left, right } in grammar.rules() {
             let mut empty_count = 0;
@@ -142,13 +153,13 @@ impl FirstSets {
                         if self.first_set_of_nonterminal(*n).can_be_empty {
                             empty_count += 1;
                         } else {
-                            break
+                            break;
                         }
-                    },
+                    }
                     Symbol::Terminal(t) => {
                         changed |= self.merge_nonterminal_to_first_set(*left, *t);
-                        break
-                    },
+                        break;
+                    }
                 }
             }
             if empty_count == right.len() {
@@ -192,8 +203,8 @@ impl FirstSets {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for FirstSets
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
         for i in grammar.nonterminal_indices() {
@@ -215,7 +226,7 @@ where
 /// A struct describing a FOLLOW set of something.
 ///
 /// A FOLLOW set contains a set of terminals and $.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, Debug, Clone)]
 pub struct FollowSet {
     pub terminals: BTreeSet<TerminalIndex>,
     pub can_be_end: bool,
@@ -246,7 +257,8 @@ impl fmt::Display for FollowSet {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for FollowSet
 where
-    T: fmt::Debug,
+    N: Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "{{")?;
@@ -271,7 +283,7 @@ where
 }
 
 /// A struct describing the FOLLOW sets of every non-terminals of a grammar.
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FollowSets(Vec<FollowSet>);
 
 impl FollowSets {
@@ -295,8 +307,8 @@ impl FollowSets {
     /// Calculate the FOLLOW sets of every non-terminals of the `grammar`.
     pub fn of_grammar<N, T>(grammar: &Grammar<N, T>, first_sets: &FirstSets) -> FollowSets
     where
-        N: Ord + Copy,
-        T: Ord + Copy,
+        N: Ord,
+        T: Ord,
     {
         let mut sets = FollowSets(vec_with_size(
             grammar.nonterminals_len(),
@@ -310,13 +322,17 @@ impl FollowSets {
         loop {
             if !sets.iteration(grammar, first_sets) {
                 // if not changed
-                break
+                break;
             }
         }
         sets
     }
 
-    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> bool {
+    fn iteration<N, T>(&mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> bool
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut changed = false;
         for Rule { left, right } in grammar.rules() {
             for (index, symbol) in right.iter().enumerate() {
@@ -366,10 +382,14 @@ impl FollowSets {
 
 impl<N, T> DisplayWith<Grammar<N, T>> for FollowSets
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
-    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> Result<(), fmt::Error>
+    where
+        N: Ord,
+        T: Ord,
+    {
         for i in grammar.nonterminal_indices() {
             if i.value() != 0 {
                 writeln!(f)?;
@@ -441,10 +461,10 @@ mod test {
             start E;
             rule E -> T, E1;
             rule E1 -> "+", T, E1;
-            rule E1 -> ε;
+            rule E1 -> epsilon;
             rule T -> F, T1;
             rule T1 -> "*", F, T1;
-            rule T1 -> ε;
+            rule T1 -> epsilon;
             rule F -> "(", E, ")";
             rule F -> "id";
         }
@@ -468,7 +488,7 @@ mod test {
         let grammar = grammar! {
             start A;
             rule A -> '(', A, ')', A;
-            rule A -> ε;
+            rule A -> epsilon;
         };
         let first_sets = FirstSets::of_grammar(&grammar);
         let follow_sets = FollowSets::of_grammar(&grammar, &first_sets);
@@ -502,9 +522,9 @@ mod test {
             start S;
             rule S -> A, B;
             rule A -> 'a';
-            rule A -> ε;
+            rule A -> epsilon;
             rule B -> 'b';
-            rule B -> ε;
+            rule B -> epsilon;
         };
         let first_sets = FirstSets::of_grammar(&grammar);
         assert_first_set(&first_sets, &grammar, &"S", &['a', 'b'], true);
@@ -521,9 +541,9 @@ mod test {
             r#"
 E: {"(", "id"}
 T: {"(", "id"}
-E1: {"+", ε}
+E1: {"+", epsilon}
 F: {"(", "id"}
-T1: {"*", ε}
+T1: {"*", epsilon}
 "#
         );
     }
@@ -568,7 +588,7 @@ T1: {"+", ")", $}
                 "{}",
                 first_sets.first_set_of_nonterminal(grammar.nonterminal_index(&"E1"))
             ),
-            "{t0, ε}"
+            "{t0, epsilon}"
         );
         assert_eq!(
             format!(
@@ -582,7 +602,7 @@ T1: {"+", ")", $}
                 "{}",
                 first_sets.first_set_of_nonterminal(grammar.nonterminal_index(&"T1"))
             ),
-            "{t1, ε}"
+            "{t1, epsilon}"
         );
     }
 

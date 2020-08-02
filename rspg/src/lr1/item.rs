@@ -7,6 +7,7 @@ use crate::lr0;
 use crate::set::FirstSet;
 use crate::set::FirstSets;
 use crate::set::FollowSet;
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fmt;
@@ -19,8 +20,8 @@ pub struct ItemSet(pub BTreeMap<lr0::item::Item, FollowSet>);
 
 impl<N, T> DisplayWith<Grammar<N, T>> for ItemSet
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         writeln!(f, "{{")?;
@@ -44,8 +45,8 @@ pub struct ItemRef<'r> {
 
 impl<'r, N, T> DisplayWith<Grammar<N, T>> for ItemRef<'r>
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "[")?;
@@ -57,13 +58,10 @@ where
             if i != 0 {
                 write!(f, " ")?;
             }
-            if i < self.lr0item.location {
-                write!(f, "{}", rule.right[i].display_with(grammar))?;
-            } else if i == self.lr0item.location {
-                write!(f, "·")?;
-            } else {
-                // i > self.lr0item.location
-                write!(f, "{}", rule.right[i - 1].display_with(grammar))?;
+            match i.cmp(&self.lr0item.location) {
+                Ordering::Less => write!(f, "{}", rule.right[i].display_with(grammar))?,
+                Ordering::Equal => write!(f, "·")?,
+                Ordering::Greater => write!(f, "{}", rule.right[i - 1].display_with(grammar))?,
             }
         }
         write!(f, ", ")?;
@@ -96,17 +94,25 @@ impl ItemSet {
         ItemSet(BTreeMap::new())
     }
 
-    pub fn closure<N, T>(mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> Self {
+    pub fn closure<N, T>(mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> Self
+    where
+        N: Ord,
+        T: Ord,
+    {
         loop {
             if !self.closure_iteration(grammar, first_sets) {
                 // if not changed
-                break
+                break;
             }
         }
         self
     }
 
-    fn closure_iteration<N, T>(&mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> bool {
+    fn closure_iteration<N, T>(&mut self, grammar: &Grammar<N, T>, first_sets: &FirstSets) -> bool
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut change = ItemSet::new();
         for (lr0item, follow) in &self.0 {
             if let Some(Symbol::Nonterminal(nonterminal)) = lr0item.next_symbol(grammar) {
@@ -126,7 +132,11 @@ impl ItemSet {
         after_first_set: FirstSet,
         origin_follow_set: &FollowSet,
         nonterminal: NonterminalIndex,
-    ) -> ItemSet {
+    ) -> ItemSet
+    where
+        N: Ord,
+        T: Ord,
+    {
         let mut map = BTreeMap::new();
         let follow = {
             let mut set = FollowSet {
@@ -157,7 +167,7 @@ impl ItemSet {
                 None => {
                     changed = true;
                     self.0.insert(lr0item, follow);
-                },
+                }
                 Some(origin_follow) => {
                     let origin_len = origin_follow.terminals.len();
                     origin_follow.terminals.append(&mut follow.terminals);
@@ -168,13 +178,17 @@ impl ItemSet {
                         changed = true;
                         origin_follow.can_be_end = true;
                     }
-                },
+                }
             }
         }
         changed
     }
 
-    pub fn next_nonterminals<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<NonterminalIndex> {
+    pub fn next_nonterminals<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<NonterminalIndex>
+    where
+        N: Ord,
+        T: Ord,
+    {
         self.0
             .iter()
             .filter_map(|(item, _follow)| {
@@ -187,7 +201,11 @@ impl ItemSet {
             .collect()
     }
 
-    pub fn next_terminals<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<TerminalIndex> {
+    pub fn next_terminals<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<TerminalIndex>
+    where
+        N: Ord,
+        T: Ord,
+    {
         self.0
             .iter()
             .filter_map(|(item, _follow)| {
@@ -200,7 +218,11 @@ impl ItemSet {
             .collect()
     }
 
-    pub fn finished<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<ItemRef> {
+    pub fn finished<N, T>(&self, grammar: &Grammar<N, T>) -> BTreeSet<ItemRef>
+    where
+        N: Ord,
+        T: Ord,
+    {
         self.0
             .iter()
             .filter_map(|(lr0item, follow)| {
@@ -217,7 +239,11 @@ impl ItemSet {
         &self,
         grammar: &Grammar<N, T>,
         nonterminal: NonterminalIndex,
-    ) -> ItemSet {
+    ) -> ItemSet
+    where
+        N: Ord,
+        T: Ord,
+    {
         ItemSet(
             self.0
                 .iter()
@@ -242,7 +268,11 @@ impl ItemSet {
         )
     }
 
-    pub fn go_terminal<N, T>(&self, grammar: &Grammar<N, T>, terminal: TerminalIndex) -> ItemSet {
+    pub fn go_terminal<N, T>(&self, grammar: &Grammar<N, T>, terminal: TerminalIndex) -> ItemSet
+    where
+        N: Ord,
+        T: Ord,
+    {
         ItemSet(
             self.0
                 .iter()
@@ -287,7 +317,7 @@ mod tests {
             rule S -> S, A;
             rule S -> 's';
             rule A -> A, 'a';
-            rule A -> ε;
+            rule A -> epsilon;
         }
     }
 
@@ -363,17 +393,11 @@ mod tests {
         let next_terminals1 = closure1.next_terminals(&grammar);
         assert_eq!(
             next_nonterminals1,
-            [grammar.nonterminal_index(&"S")]
-                .into_iter()
-                .cloned()
-                .collect()
+            [grammar.nonterminal_index(&"S")].iter().cloned().collect()
         );
         assert_eq!(
             next_terminals1,
-            [grammar.terminal_index(&'s')]
-                .into_iter()
-                .cloned()
-                .collect()
+            [grammar.terminal_index(&'s')].iter().cloned().collect()
         );
 
         let item_set2 = closure1.go_nonterminal(&grammar, grammar.nonterminal_index(&"S"));
@@ -486,12 +510,9 @@ mod tests {
         let next_terminals2 = closure2.next_terminals(&grammar);
         assert_eq!(
             next_nonterminals2,
-            [grammar.nonterminal_index(&"A")]
-                .into_iter()
-                .cloned()
-                .collect()
+            [grammar.nonterminal_index(&"A")].iter().cloned().collect()
         );
-        assert_eq!(next_terminals2, [].into_iter().cloned().collect());
+        assert_eq!(next_terminals2, [].iter().cloned().collect());
 
         let item_set4 = closure2.go_nonterminal(&grammar, grammar.nonterminal_index(&"A"));
         assert_eq!(item_set4, {
@@ -562,18 +583,15 @@ mod tests {
 
         let next_nonterminals3 = closure3.next_nonterminals(&grammar);
         let next_terminals3 = closure3.next_terminals(&grammar);
-        assert_eq!(next_nonterminals3, [].into_iter().cloned().collect());
-        assert_eq!(next_terminals3, [].into_iter().cloned().collect());
+        assert_eq!(next_nonterminals3, [].iter().cloned().collect());
+        assert_eq!(next_terminals3, [].iter().cloned().collect());
 
         let next_nonterminals4 = closure4.next_nonterminals(&grammar);
         let next_terminals4 = closure4.next_terminals(&grammar);
-        assert_eq!(next_nonterminals4, [].into_iter().cloned().collect());
+        assert_eq!(next_nonterminals4, [].iter().cloned().collect());
         assert_eq!(
             next_terminals4,
-            [grammar.terminal_index(&'a')]
-                .into_iter()
-                .cloned()
-                .collect()
+            [grammar.terminal_index(&'a')].iter().cloned().collect()
         );
 
         let item_set5 = closure4.go_terminal(&grammar, grammar.terminal_index(&'a'));
@@ -623,7 +641,7 @@ mod tests {
             rule S -> A;
             rule A -> A, 'a';
             rule A -> A, A;
-            rule A -> ε;
+            rule A -> epsilon;
         };
         let first_sets = FirstSets::of_grammar(&grammar);
         let mut rule_indices = grammar.rule_indices();

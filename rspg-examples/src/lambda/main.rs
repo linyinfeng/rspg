@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use log::{debug, error, info, trace};
 use rspg::display::DisplayWith;
 use rustyline::error::ReadlineError;
@@ -86,19 +88,14 @@ mod lambda {
     {
         fn match_variable(&mut self) -> String {
             let mut name = String::new();
-            loop {
-                match self.input.peek() {
-                    Some(c) => {
-                        let c = *c;
-                        match c {
-                            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
-                                self.input.next();
-                                name.push(c);
-                            },
-                            _ => break,
-                        }
-                    },
-                    None => break,
+            while let Some(c) = self.input.peek() {
+                let c = *c;
+                match c {
+                    'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
+                        self.input.next();
+                        name.push(c);
+                    }
+                    _ => break,
                 }
             }
             if name.is_empty() {
@@ -123,33 +120,33 @@ mod lambda {
                         match c {
                             '\\' | 'λ' => {
                                 self.input.next();
-                                return Some(Ok(Token::Lambda))
-                            },
+                                return Some(Ok(Token::Lambda));
+                            }
                             '.' => {
                                 self.input.next();
-                                return Some(Ok(Token::Point))
-                            },
+                                return Some(Ok(Token::Point));
+                            }
                             '(' => {
                                 self.input.next();
-                                return Some(Ok(Token::LeftBracket))
-                            },
+                                return Some(Ok(Token::LeftBracket));
+                            }
                             ')' => {
                                 self.input.next();
-                                return Some(Ok(Token::RightBracket))
-                            },
+                                return Some(Ok(Token::RightBracket));
+                            }
                             'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
                                 let name = self.match_variable();
-                                return Some(Ok(Token::Variable(name)))
-                            },
+                                return Some(Ok(Token::Variable(name)));
+                            }
                             ' ' | '\t' | '\n' => {
                                 self.input.next();
-                            },
+                            }
                             other => {
                                 self.input.next();
-                                return Some(Err(TokensError::InvalidChar(other)))
-                            },
+                                return Some(Err(TokensError::InvalidChar(other)));
+                            }
                         }
-                    },
+                    }
                     None => return None,
                 }
             }
@@ -314,25 +311,25 @@ fn main() {
                     Ok(t) => {
                         trace!("parsed token: {:?}", t);
                         Some(t)
-                    },
+                    }
                     Err(e) => {
                         error!("tokenize error: {}", e);
                         None
-                    },
+                    }
                 });
                 match lambda::PARSER.parse(tokens) {
                     Ok(p) => {
                         debug!("result: {:#?}", p);
                         println!("{}", p);
-                    },
+                    }
                     Err(e) => error!("parse error: {:?}", e),
                 }
-            },
+            }
             Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
             Err(err) => {
                 error!("readline error: {:?}", err);
-                break
-            },
+                break;
+            }
         }
     }
     rl.save_history("rspg-lambda-history.txt").unwrap();

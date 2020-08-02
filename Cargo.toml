@@ -1,4 +1,6 @@
 [workspace]
 members = [
     "rspg",
+    "rspg-macros",
+    "rspg-examples",
 ]

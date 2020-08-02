@@ -2,28 +2,39 @@ use crate::display::DisplayWith;
 use crate::grammar::Grammar;
 use crate::grammar::RuleIndex;
 use crate::grammar::Symbol;
+use serde::Deserialize;
+use serde::Serialize;
+use std::cmp::Ordering;
 use std::fmt;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Clone, Copy)]
 pub struct Item {
     pub rule: RuleIndex,
     pub location: usize,
 }
 
 impl Item {
-    pub fn next_symbol<N, T>(&self, grammar: &Grammar<N, T>) -> Option<Symbol> {
+    pub fn next_symbol<N, T>(&self, grammar: &Grammar<N, T>) -> Option<Symbol>
+    where
+        N: Ord,
+        T: Ord,
+    {
         grammar.rule(self.rule).right.get(self.location).cloned()
     }
 
-    pub fn finished<N, T>(&self, grammar: &Grammar<N, T>) -> bool {
+    pub fn finished<N, T>(&self, grammar: &Grammar<N, T>) -> bool
+    where
+        N: Ord,
+        T: Ord,
+    {
         grammar.rule(self.rule).right.len() == self.location
     }
 }
 
 impl<N, T> DisplayWith<Grammar<N, T>> for Item
 where
-    N: fmt::Display,
-    T: fmt::Debug,
+    N: fmt::Display + Ord,
+    T: fmt::Debug + Ord,
 {
     fn fmt(&self, f: &mut fmt::Formatter, grammar: &Grammar<N, T>) -> fmt::Result {
         write!(f, "[")?;
@@ -34,13 +45,10 @@ where
             if i != 0 {
                 write!(f, " ")?;
             }
-            if i < self.location {
-                write!(f, "{}", rule.right[i].display_with(grammar))?;
-            } else if i == self.location {
-                write!(f, "·")?;
-            } else {
-                // if i > self.location
-                write!(f, "{}", rule.right[i - 1].display_with(grammar))?;
+            match i.cmp(&self.location) {
+                Ordering::Less => write!(f, "{}", rule.right[i].display_with(grammar))?,
+                Ordering::Equal => write!(f, "·")?,
+                Ordering::Greater => write!(f, "{}", rule.right[i - 1].display_with(grammar))?,
             }
         }
         write!(f, "]")?;
@@ -60,7 +68,7 @@ mod tests {
         grammar! {
             start E;
             rule E -> A, 'b', 'c', E;
-            rule E -> ε;
+            rule E -> epsilon;
         }
     }
 
