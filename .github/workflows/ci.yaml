@@ -26,6 +26,11 @@ jobs:
 
       - uses: actions-rs/cargo@master
         with:
+          command: fmt
+          args: -- --check
+
+      - uses: actions-rs/cargo@master
+        with:
           command: build
           args: --all-targets
 
@@ -33,11 +38,6 @@ jobs:
         with:
           command: test
           args: --all-targets
-
-      - uses: actions-rs/cargo@master
-        with:
-          command: fmt
-          args: -- --check
 
       - uses: actions-rs/cargo@master
         with:
