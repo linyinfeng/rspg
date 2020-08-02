@@ -26,11 +26,13 @@ jobs:
 
       - uses: actions-rs/cargo@master
         with:
-          command: build --tests --examples
+          command: build
+          args: --tests --examples
 
       - uses: actions-rs/cargo@master
         with:
-          command: test --workspace
+          command: test
+          args: --workspace
 
       - uses: actions-rs/cargo@master
         with:
