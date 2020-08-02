@@ -14,7 +14,7 @@ readme = "README.md"
 proc-macro = true
 
 [dependencies]
-rspg = { version = "0.0.0", path = "../rspg" }
+rspg = { version = "^0.0.1-alpha.1", path = "../rspg" }
 syn = { version = "1.0.36", features = ["full", "extra-traits"] }
 quote = "1.0.7"
 proc-macro2 = "1.0.19"
