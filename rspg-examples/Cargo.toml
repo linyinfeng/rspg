@@ -20,8 +20,8 @@ path = "src/simple-calculator/main.rs"
 [dependencies]
 rspg = { path = "../rspg" }
 rspg-macros = { path = "../rspg-macros" }
-lazy_static = "*"
-log = "*"
-env_logger = "*"
-rustyline = "*"
-ron = "*"
+lazy_static = "1.4.0"
+log = "0.4.11"
+env_logger = "0.7.1"
+rustyline = "6.2.0"
+ron = "0.6.0"

@@ -15,8 +15,8 @@ proc-macro = true
 
 [dependencies]
 rspg = { version = "0.0.0", path = "../rspg" }
-syn = { version = "1", features = ["full", "extra-traits"] }
-quote = "1"
-proc-macro2 = "1"
-serde = "1"
-ron = "0.6"
+syn = { version = "1.0.36", features = ["full", "extra-traits"] }
+quote = "1.0.7"
+proc-macro2 = "1.0.19"
+serde = "1.0.114"
+ron = "0.6.0"
