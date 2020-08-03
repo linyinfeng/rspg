@@ -23,7 +23,7 @@ pub mod keyword {
     syn::custom_keyword!(rule);
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Start {
     pub start: keyword::start,
     pub nonterminal: Ident,
@@ -40,7 +40,7 @@ impl Parse for Start {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Rule {
     pub rule: keyword::rule,
     pub left: Ident,
@@ -73,7 +73,7 @@ impl Parse for Rule {
 
 type SymbolString = Vec<PatSymbol>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PatSymbol {
     pub pat: Option<(Pat, Token![:])>,
     pub symbol: Symbol,
@@ -98,7 +98,7 @@ impl Parse for PatSymbol {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Symbol {
     Nonterminal(Ident),
     Terminal(LitStr),
@@ -124,7 +124,7 @@ impl Parse for Symbol {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RspgContent {
     pub start: Start,
     pub token: TokenDescription,
@@ -159,10 +159,10 @@ impl Parse for RspgContent {
             }
         }
         Ok(RspgContent {
-            start: start.expect("start clause required"),
-            token: token.expect("token clause required"),
+            start: start.ok_or_else(|| input.error("start clause required"))?,
+            token: token.ok_or_else(|| input.error("token clause required"))?,
             terminals,
-            error: error.expect("error clause required"),
+            error: error.ok_or_else(|| input.error("error clause required"))?,
             nonterminals,
             rules,
         })
@@ -181,7 +181,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TokenDescription {
     pub token: keyword::token,
     pub ty: Type,
@@ -198,7 +198,7 @@ impl Parse for TokenDescription {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ErrorDescription {
     pub error: keyword::error,
     pub ty: Type,
@@ -215,7 +215,7 @@ impl Parse for ErrorDescription {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NonterminalDescription {
     pub nonterminal: keyword::nonterminal,
     pub ident: Ident,
@@ -236,7 +236,7 @@ impl Parse for NonterminalDescription {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TerminalDescription {
     pub terminal: keyword::terminal,
     pub lit: LitStr,
@@ -259,7 +259,7 @@ impl Parse for TerminalDescription {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RspgMod {
     pub outer_attrs: Vec<Attribute>,
     pub visibility: Visibility,

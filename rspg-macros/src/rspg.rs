@@ -1,14 +1,19 @@
 mod data;
 
+use data::NonterminalDescription;
+use data::RspgContent;
+use data::RspgMod;
+use data::TerminalDescription;
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote::quote_spanned;
 use quote::ToTokens;
+use rspg::grammar::Grammar;
+use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 use syn::Ident;
-use syn::Type;
+use syn::LitStr;
 
 macro_rules! use_names {
     () => ();
@@ -62,7 +67,7 @@ define_names! {
 }
 
 pub fn rspg(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let parsed = syn::parse_macro_input!(input as data::RspgMod);
+    let parsed = syn::parse_macro_input!(input as RspgMod);
     // println!("{:#?}", parsed);
     let mod_vis = parsed.visibility;
     let mod_name = parsed.mod_name;
@@ -80,80 +85,117 @@ pub fn rspg(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     result.into()
 }
 
-fn build_contents(content: data::RspgContent) -> TokenStream {
+struct Context {
+    content: RspgContent,
+    grammar: Grammar<String, String>,
+    nonterminal_map: BTreeMap<String, NonterminalDescription>,
+    terminal_map: BTreeMap<String, TerminalDescription>,
+}
+
+fn build_contents(content: RspgContent) -> TokenStream {
+    let ctx = match build_context(content) {
+        Err(e) => return e,
+        Ok(g) => g,
+    };
+
+    let rules: Vec<_> = ctx.grammar.rule_indices().collect();
+    let first_sets = rspg::set::FirstSets::of_grammar(&ctx.grammar);
+    let follow_sets = rspg::set::FollowSets::of_grammar(&ctx.grammar, &first_sets);
+    let table =
+        rspg::lr1::generator::Generator::construct(&ctx.grammar, &first_sets, "".to_string())
+            .generate(&ctx.grammar)
+            .unwrap(); // Add diagnostic
+
     let mut result = proc_macro2::TokenStream::new();
-
     use_names! { _Grammar, _Vec, _String, _RuleIndex, _FirstSets, _FollowSets, _Table, }
-
-    let grammar = build_grammar(&content);
-    assert_content(&content, &grammar);
-
     result.extend(embed_data(
+        &ctx.grammar,
         "GRAMMAR",
         quote!(#_Grammar<#_String, #_String>),
-        &grammar,
     ));
-    let rules: Vec<_> = grammar.rule_indices().collect();
-    result.extend(embed_data("RULES", quote!(#_Vec<#_RuleIndex>), &rules));
-    let first_sets = rspg::set::FirstSets::of_grammar(&grammar);
-    result.extend(embed_data("FIRST_SETS", quote!(#_FirstSets), &first_sets));
-    let follow_sets = rspg::set::FollowSets::of_grammar(&grammar, &first_sets);
+    result.extend(embed_data(&rules, "RULES", quote!(#_Vec<#_RuleIndex>)));
+    result.extend(embed_data(&first_sets, "FIRST_SETS", quote!(#_FirstSets)));
     result.extend(embed_data(
+        &follow_sets,
         "FOLLOW_SETS",
         quote!(#_FollowSets),
-        &follow_sets,
     ));
-    let table = rspg::lr1::generator::Generator::construct(&grammar, &first_sets, "".to_string())
-        .generate(&grammar)
-        .unwrap();
-    result.extend(embed_data("TABLE", quote!(#_Table), &table));
+    result.extend(embed_data(&table, "TABLE", quote!(#_Table)));
 
-    result.extend(parsed_type(&content.nonterminals));
-    result.extend(token_impl(&grammar, &content.token, &content.terminals));
-    result.extend(reducer(&grammar, &content));
-
-    result.extend(parser(&content));
+    result.extend(enum_parsed(&ctx));
+    result.extend(token_impl(&ctx));
+    result.extend(reducer(&ctx));
+    result.extend(parser(&ctx));
 
     result
 }
 
-fn assert_content(content: &data::RspgContent, grammar: &rspg::grammar::Grammar<String, String>) {
-    assert_eq!(
-        content
-            .terminals
-            .iter()
-            .map(|d| d.lit.value())
-            .collect::<BTreeSet<_>>(),
-        grammar.terminals().cloned().collect::<BTreeSet<_>>(),
-        "terminal definitions should match terminals in rule"
-    );
-    assert_eq!(
-        content
-            .nonterminals
-            .iter()
-            .map(|d| d.ident.to_string())
-            .collect::<BTreeSet<_>>(),
-        grammar.nonterminals().cloned().collect::<BTreeSet<_>>(),
-        "nonterminal definitions should match nonterminals in rule"
-    );
-}
+fn build_context(content: RspgContent) -> Result<Context, TokenStream> {
+    let nonterminal_map: BTreeMap<_, _> = content
+        .nonterminals
+        .iter()
+        .map(|n| (n.ident.to_string(), n.clone()))
+        .collect();
+    let terminal_map: BTreeMap<_, _> = content
+        .terminals
+        .iter()
+        .map(|t| (t.lit.value(), t.clone()))
+        .collect();
 
-fn build_grammar(content: &data::RspgContent) -> rspg::grammar::Grammar<String, String> {
     let mut builder = rspg::grammar::GrammarBuilder::new();
-    builder = builder.start(content.start.nonterminal.to_string());
+    let errors = RefCell::new(TokenStream::new());
+    let meet_nonterminal = |n: &Ident| {
+        let s = n.to_string();
+        if !nonterminal_map.contains_key(&s) {
+            let message = format!("undefined nonterminal: {}", s);
+            errors
+                .borrow_mut()
+                .extend(quote_spanned! {n.span() => compile_error!(#message); });
+        }
+    };
+    let meet_terminal = |t: &LitStr| {
+        let s = t.value();
+        if !terminal_map.contains_key(&s) {
+            let message = format!("undefined terminal: {:?}", s);
+            errors
+                .borrow_mut()
+                .extend(quote_spanned! {t.span() => compile_error!(#message); });
+        }
+    };
+
+    let start = &content.start.nonterminal;
+    meet_nonterminal(start);
+    builder = builder.start(start.to_string());
     for rule in &content.rules {
         builder = builder.push_rule_left(rule.left.to_string());
         for right in &rule.right {
             builder = match &right.symbol {
-                data::Symbol::Nonterminal(n) => builder.push_rule_right_nonterminal(n.to_string()),
-                data::Symbol::Terminal(t) => builder.push_rule_right_terminal(t.value()),
+                data::Symbol::Nonterminal(n) => {
+                    meet_nonterminal(n);
+                    builder.push_rule_right_nonterminal(n.to_string())
+                }
+                data::Symbol::Terminal(t) => {
+                    meet_terminal(t);
+                    builder.push_rule_right_terminal(t.value())
+                }
             };
         }
     }
-    builder.build()
+    let grammar = builder.build();
+
+    if errors.borrow().is_empty() {
+        Ok(Context {
+            content,
+            grammar,
+            nonterminal_map,
+            terminal_map,
+        })
+    } else {
+        Err(errors.into_inner())
+    }
 }
 
-fn embed_data<T>(name: &str, ty: TokenStream, data: &T) -> TokenStream
+fn embed_data<T>(data: &T, name: &str, ty: TokenStream) -> TokenStream
 where
     T: serde::Serialize,
 {
@@ -163,12 +205,17 @@ where
     use_names! { _lazy_static, _ron_from_str, }
     quote! {
         #_lazy_static! {
-            pub static ref #ident: #ty = #_ron_from_str(#string).unwrap();
+            pub static ref #ident: #ty = #_ron_from_str(#string).expect("failed to load embedded data");
         }
     }
 }
 
-fn parsed_type(nonterminals: &[data::NonterminalDescription]) -> TokenStream {
+fn enum_parsed(ctx: &Context) -> TokenStream {
+    let Context {
+        content: RspgContent { nonterminals, .. },
+        ..
+    } = ctx;
+
     let mut result = TokenStream::new();
 
     let idents = nonterminals.iter().map(|d| &d.ident);
@@ -207,11 +254,15 @@ fn parsed_type(nonterminals: &[data::NonterminalDescription]) -> TokenStream {
 // `_TerminalIndex` is used twice in this function,
 // causing quote create a new `non_snake_case` variable.
 #[allow(non_snake_case)]
-fn token_impl(
-    grammar: &rspg::grammar::Grammar<String, String>,
-    token: &data::TokenDescription,
-    terminals: &[data::TerminalDescription],
-) -> TokenStream {
+fn token_impl(ctx: &Context) -> TokenStream {
+    let Context {
+        grammar,
+        content: RspgContent {
+            token, terminals, ..
+        },
+        ..
+    } = ctx;
+
     let ty = &token.ty;
     let lits = terminals.iter().map(|d| &d.lit);
     let pats = terminals.iter().map(|d| &d.pat);
@@ -252,10 +303,11 @@ fn token_impl(
     }
 }
 
-fn reducer(
-    grammar: &rspg::grammar::Grammar<String, String>,
-    content: &data::RspgContent,
-) -> TokenStream {
+fn reducer(ctx: &Context) -> TokenStream {
+    let Context {
+        content, grammar, ..
+    } = ctx;
+
     let token_type = &content.token.ty;
     let rule_index_values = grammar.rule_indices().map(rspg::grammar::RuleIndex::value);
 
@@ -263,30 +315,15 @@ fn reducer(
     use_names! { _Result, }
     let result_type = quote! {#_Result<Parsed, #error_type>};
 
-    let terminal_map = content
-        .terminals
-        .iter()
-        .map(|t| (t.lit.value(), t))
-        .collect();
-    let nonterminal_map = content
-        .nonterminals
-        .iter()
-        .map(|t| (t.ident.to_string(), t))
-        .collect();
-    let rule_body = rule_index_values.clone().map(|i| {
-        rule_reducer(
-            &quote! { _r.from },
-            &content.rules[i],
-            &terminal_map,
-            &nonterminal_map,
-            error_type,
-        )
-    });
+    let reduce = Ident::new("reduce", Span::call_site());
+    let rule_body = rule_index_values
+        .clone()
+        .map(|i| rule_reducer(ctx, &reduce, &content.rules[i]));
 
     use_names! { _Reduce, }
     quote! {
-        fn reducer(mut _r: #_Reduce<Parsed, #token_type>) -> #result_type {
-            match _r.rule.value() {
+        fn reducer(mut #reduce: #_Reduce<Parsed, #token_type>) -> #result_type {
+            match #reduce.rule.value() {
                 #(
                     #rule_index_values => #rule_body,
                 )*
@@ -296,20 +333,15 @@ fn reducer(
     }
 }
 
-fn rule_reducer(
-    from: &TokenStream,
-    rule: &data::Rule,
-    terminal_map: &BTreeMap<String, &data::TerminalDescription>,
-    nonterminal_map: &BTreeMap<String, &data::NonterminalDescription>,
-    error_type: &Type,
-) -> TokenStream {
+fn rule_reducer(ctx: &Context, reduce: &Ident, rule: &data::Rule) -> TokenStream {
     let left = &rule.left;
-    let left_type = &nonterminal_map[&left.to_string()].ty;
+    let left_type = &ctx.nonterminal_map[&left.to_string()].ty;
     let body = &rule.body;
     let binders = rule
         .right
         .iter()
-        .map(|pat_symbol| binder(from, pat_symbol, terminal_map));
+        .map(|pat_symbol| binder(ctx, reduce, pat_symbol));
+    let error_type = &ctx.content.error.ty;
     use_names! { _Result, }
     quote! {
         {
@@ -324,11 +356,7 @@ fn rule_reducer(
     }
 }
 
-fn binder(
-    from: &TokenStream,
-    pat_symbol: &data::PatSymbol,
-    terminal_map: &BTreeMap<String, &data::TerminalDescription>,
-) -> TokenStream {
+fn binder(ctx: &Context, reduce: &Ident, pat_symbol: &data::PatSymbol) -> TokenStream {
     let data::PatSymbol { pat, symbol } = pat_symbol;
     let pat_tokens = match pat {
         Some((pat, _)) => pat.to_token_stream(),
@@ -338,7 +366,7 @@ fn binder(
         data::Symbol::Nonterminal(n) => {
             let unwrapper = unwrap_ident(n);
             quote! {
-                #from
+                #reduce.from
                     .pop_front()
                     .expect("expect a stack item")
                     .parsed()
@@ -347,11 +375,11 @@ fn binder(
             }
         }
         data::Symbol::Terminal(t) => {
-            let terminal = &terminal_map[&t.value()];
+            let terminal = &ctx.terminal_map[&t.value()];
             let pat = &terminal.pat;
             let expr = &terminal.expr;
             quote! {
-                match #from
+                match #reduce.from
                         .pop_front()
                         .expect("expect a stack item")
                         .token()
@@ -367,14 +395,9 @@ fn binder(
     }
 }
 
-fn unwrap_ident(i: &Ident) -> Ident {
-    Ident::new(
-        &format!("unwrap_{}", i.to_string().to_lowercase()),
-        i.span(),
-    )
-}
+fn parser(ctx: &Context) -> TokenStream {
+    let Context { content, .. } = ctx;
 
-fn parser(content: &data::RspgContent) -> TokenStream {
     let token_type = &content.token.ty;
     let error_type = &content.error.ty;
     let start_type = &content
@@ -411,4 +434,11 @@ fn parser(content: &data::RspgContent) -> TokenStream {
             PARSER.parse(input).map(Parsed::#unwrap_start)
         }
     }
+}
+
+fn unwrap_ident(i: &Ident) -> Ident {
+    Ident::new(
+        &format!("unwrap_{}", i.to_string().to_lowercase()),
+        i.span(),
+    )
 }
