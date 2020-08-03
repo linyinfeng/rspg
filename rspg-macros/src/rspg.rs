@@ -83,11 +83,10 @@ pub fn rspg(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 fn build_contents(content: data::RspgContent) -> TokenStream {
     let mut result = proc_macro2::TokenStream::new();
 
-    use_names!{ _Grammar, _Vec, _String, _RuleIndex, _FirstSets, _FollowSets, _Table, }
+    use_names! { _Grammar, _Vec, _String, _RuleIndex, _FirstSets, _FollowSets, _Table, }
 
     let grammar = build_grammar(&content);
     assert_content(&content, &grammar);
-
 
     result.extend(embed_data(
         "GRAMMAR",
@@ -95,17 +94,9 @@ fn build_contents(content: data::RspgContent) -> TokenStream {
         &grammar,
     ));
     let rules: Vec<_> = grammar.rule_indices().collect();
-    result.extend(embed_data(
-        "RULES",
-        quote!(#_Vec<#_RuleIndex>),
-        &rules,
-    ));
+    result.extend(embed_data("RULES", quote!(#_Vec<#_RuleIndex>), &rules));
     let first_sets = rspg::set::FirstSets::of_grammar(&grammar);
-    result.extend(embed_data(
-        "FIRST_SETS",
-        quote!(#_FirstSets),
-        &first_sets,
-    ));
+    result.extend(embed_data("FIRST_SETS", quote!(#_FirstSets), &first_sets));
     let follow_sets = rspg::set::FollowSets::of_grammar(&grammar, &first_sets);
     result.extend(embed_data(
         "FOLLOW_SETS",
@@ -115,11 +106,7 @@ fn build_contents(content: data::RspgContent) -> TokenStream {
     let table = rspg::lr1::generator::Generator::construct(&grammar, &first_sets, "".to_string())
         .generate(&grammar)
         .unwrap();
-    result.extend(embed_data(
-        "TABLE",
-        quote!(#_Table),
-        &table,
-    ));
+    result.extend(embed_data("TABLE", quote!(#_Table), &table));
 
     result.extend(parsed_type(&content.nonterminals));
     result.extend(token_impl(&grammar, &content.token, &content.terminals));
@@ -234,7 +221,7 @@ fn token_impl(
     let _exprs = terminals.iter().map(|d| &d.expr);
 
     let pats2 = pats.clone();
-    use_names!{ _Grammar, _TerminalIndex, _String, _Token, _Ord, }
+    use_names! { _Grammar, _TerminalIndex, _String, _Token, _Ord, }
     quote! {
         impl #_Token<#_String> for #ty {
             #[allow(unused_variables)]
@@ -323,7 +310,7 @@ fn rule_reducer(
         .right
         .iter()
         .map(|pat_symbol| binder(from, pat_symbol, terminal_map));
-    use_names!{ _Result, }
+    use_names! { _Result, }
     quote! {
         {
             #(

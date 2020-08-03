@@ -1,3 +1,4 @@
+use proc_macro2::Span;
 use syn::braced;
 use syn::parenthesized;
 use syn::parse;
@@ -12,7 +13,6 @@ use syn::Pat;
 use syn::Token;
 use syn::Type;
 use syn::Visibility;
-use proc_macro2::Span;
 
 pub mod keyword {
     syn::custom_keyword!(start);
