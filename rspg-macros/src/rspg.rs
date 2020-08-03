@@ -3,11 +3,63 @@ mod data;
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
+use quote::quote_spanned;
 use quote::ToTokens;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use syn::Ident;
 use syn::Type;
+
+macro_rules! use_names {
+    () => ();
+    ($name:ident, $($tail:tt)*) => (
+        use_name!($name $name);
+        use_names!($($tail)*)
+    );
+    ($span:expr => $name:ident, $($tail:tt)*) => (
+        use_name!($span => $name $name);
+        use_names!($($tail)*)
+    );
+}
+
+// See <https://github.com/SergioBenitez/Rocket/blob/45b4436ed3a7ab913d96c2b69ee4df7fd8c0c618/core/codegen/src/lib.rs#L61>
+macro_rules! define_names {
+    ($($name:ident => $path:path,)*) => (
+        macro_rules! use_name {
+            $(
+                ($i:ident $name) => (
+                    #[allow(non_snake_case)] let $i = quote!{$path};
+                );
+            )*
+            $(
+                ($span:expr => $i:ident $name) => (
+                    #[allow(non_snake_case)] let $i = quote_spanned!{$span => $path};
+                );
+            )*
+        }
+    );
+}
+
+define_names! {
+    _ron_from_str => ::ron::de::from_str,
+    _lazy_static => ::lazy_static::lazy_static,
+    _Grammar => ::rspg::grammar::Grammar,
+    _TerminalIndex => ::rspg::grammar::TerminalIndex,
+    _RuleIndex => ::rspg::grammar::RuleIndex,
+    _FirstSets => ::rspg::set::FirstSets,
+    _FollowSets => ::rspg::set::FollowSets,
+    _Table => ::rspg::lr1::table::Table,
+    _Token => ::rspg::token::Token,
+    _Reduce => ::rspg::lr1::parser::Reduce,
+    _Parser => ::rspg::lr1::parser::Parser,
+    _ParserError => ::rspg::lr1::parser::Error,
+    _String => ::std::string::String,
+    _Vec => ::std::vec::Vec,
+    _Result => ::std::result::Result,
+    _Iterator => ::std::iter::Iterator,
+    _Ord => ::std::cmp::Ord,
+    _PhantomData => ::std::marker::PhantomData,
+}
 
 pub fn rspg(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let parsed = syn::parse_macro_input!(input as data::RspgMod);
@@ -31,30 +83,33 @@ pub fn rspg(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 fn build_contents(content: data::RspgContent) -> TokenStream {
     let mut result = proc_macro2::TokenStream::new();
 
+    use_names!{ _Grammar, _Vec, _String, _RuleIndex, _FirstSets, _FollowSets, _Table, }
+
     let grammar = build_grammar(&content);
     assert_content(&content, &grammar);
 
+
     result.extend(embed_data(
         "GRAMMAR",
-        quote!(::rspg::grammar::Grammar<String, String>),
+        quote!(#_Grammar<#_String, #_String>),
         &grammar,
     ));
     let rules: Vec<_> = grammar.rule_indices().collect();
     result.extend(embed_data(
         "RULES",
-        quote!(Vec<::rspg::grammar::RuleIndex>),
+        quote!(#_Vec<#_RuleIndex>),
         &rules,
     ));
     let first_sets = rspg::set::FirstSets::of_grammar(&grammar);
     result.extend(embed_data(
         "FIRST_SETS",
-        quote!(::rspg::set::FirstSets),
+        quote!(#_FirstSets),
         &first_sets,
     ));
     let follow_sets = rspg::set::FollowSets::of_grammar(&grammar, &first_sets);
     result.extend(embed_data(
         "FOLLOW_SETS",
-        quote!(::rspg::set::FollowSets),
+        quote!(#_FollowSets),
         &follow_sets,
     ));
     let table = rspg::lr1::generator::Generator::construct(&grammar, &first_sets, "".to_string())
@@ -62,7 +117,7 @@ fn build_contents(content: data::RspgContent) -> TokenStream {
         .unwrap();
     result.extend(embed_data(
         "TABLE",
-        quote!(::rspg::lr1::table::Table),
+        quote!(#_Table),
         &table,
     ));
 
@@ -118,9 +173,10 @@ where
     let ident = Ident::new(name, Span::call_site());
     let string =
         ron::ser::to_string(data).unwrap_or_else(|_| panic!("failed to serialize data {}", name));
+    use_names! { _lazy_static, _ron_from_str, }
     quote! {
-        ::lazy_static::lazy_static! {
-            pub static ref #ident: #ty = ::ron::de::from_str(#string).unwrap();
+        #_lazy_static! {
+            pub static ref #ident: #ty = #_ron_from_str(#string).unwrap();
         }
     }
 }
@@ -161,6 +217,9 @@ fn parsed_type(nonterminals: &[data::NonterminalDescription]) -> TokenStream {
     result
 }
 
+// `_TerminalIndex` is used twice in this function,
+// causing quote create a new `non_snake_case` variable.
+#[allow(non_snake_case)]
 fn token_impl(
     grammar: &rspg::grammar::Grammar<String, String>,
     token: &data::TokenDescription,
@@ -175,10 +234,11 @@ fn token_impl(
     let _exprs = terminals.iter().map(|d| &d.expr);
 
     let pats2 = pats.clone();
+    use_names!{ _Grammar, _TerminalIndex, _String, _Token, _Ord, }
     quote! {
-        impl ::rspg::token::Token<::std::string::String> for #ty {
+        impl #_Token<#_String> for #ty {
             #[allow(unused_variables)]
-            fn terminal(&self) -> ::std::string::String {
+            fn terminal(&self) -> #_String {
                 match self {
                     #(
                         #pats => #lits.to_string(),
@@ -188,15 +248,15 @@ fn token_impl(
 
             #[allow(unused_variables)]
             fn terminal_index<N>(
-                &self, grammar: &::rspg::grammar::Grammar<N, ::std::string::String>
-            ) -> ::rspg::grammar::TerminalIndex
+                &self, grammar: &#_Grammar<N, #_String>
+            ) -> #_TerminalIndex
             where
-                N: ::std::cmp::Ord,
+                N: #_Ord,
             {
                 match self {
                     #(
                         #pats2 => unsafe {
-                            ::rspg::grammar::TerminalIndex::new(#indices)
+                            #_TerminalIndex::new(#indices)
                         },
                     )*
                 }
@@ -213,7 +273,9 @@ fn reducer(
     let rule_index_values = grammar.rule_indices().map(rspg::grammar::RuleIndex::value);
 
     let error_type = &content.error.ty;
-    let result_type = quote! {::std::result::Result<Parsed, #error_type>};
+    use_names! { _Result, }
+    let result_type = quote! {#_Result<Parsed, #error_type>};
+
     let terminal_map = content
         .terminals
         .iter()
@@ -233,8 +295,10 @@ fn reducer(
             error_type,
         )
     });
+
+    use_names! { _Reduce, }
     quote! {
-        fn reducer(mut _r: ::rspg::lr1::parser::Reduce<Parsed, #token_type>) -> #result_type {
+        fn reducer(mut _r: #_Reduce<Parsed, #token_type>) -> #result_type {
             match _r.rule.value() {
                 #(
                     #rule_index_values => #rule_body,
@@ -259,12 +323,13 @@ fn rule_reducer(
         .right
         .iter()
         .map(|pat_symbol| binder(from, pat_symbol, terminal_map));
+    use_names!{ _Result, }
     quote! {
         {
             #(
                 #binders
             )*
-            let value = (|| -> ::std::result::Result<#left_type, #error_type> {
+            let value = (|| -> #_Result<#left_type, #error_type> {
                 #body
             })();
             value.map(Parsed::#left)
@@ -280,7 +345,7 @@ fn binder(
     let data::PatSymbol { pat, symbol } = pat_symbol;
     let pat_tokens = match pat {
         Some((pat, _)) => pat.to_token_stream(),
-        None => quote! { _ },
+        None => quote_spanned! {symbol.span() => _ },
     };
     let expr = match symbol {
         data::Symbol::Nonterminal(n) => {
@@ -332,29 +397,29 @@ fn parser(content: &data::RspgContent) -> TokenStream {
         .unwrap()
         .ty;
     let unwrap_start = unwrap_ident(&content.start.nonterminal);
+    use_names! { _lazy_static, _Result, _PhantomData, _Parser, _Reduce, _String, _Iterator, _ParserError, }
     quote! {
-        ::lazy_static::lazy_static! {
-            pub static ref PARSER: ::rspg::lr1::parser::Parser<
+        #_lazy_static! {
+            pub static ref PARSER: #_Parser<
                 'static,
                 'static,
-                ::std::string::String,
-                ::std::string::String,
+                #_String,
+                #_String,
                 #token_type,
                 Parsed,
-                fn(::rspg::lr1::parser::Reduce<Parsed, #token_type>) ->
-                    ::std::result::Result<Parsed, #error_type>,
+                fn(#_Reduce<Parsed, #token_type>) -> #_Result<Parsed, #error_type>,
                 #error_type,
-            > = ::rspg::lr1::parser::Parser {
+            > = #_Parser {
                 grammar: &GRAMMAR,
                 table: &TABLE,
                 reducer,
-                phantom: ::std::marker::PhantomData,
+                phantom: #_PhantomData,
             };
         }
 
-        pub fn parse<I>(input: I) -> Result<#start_type, ::rspg::lr1::parser::Error<#error_type>>
+        pub fn parse<I>(input: I) -> #_Result<#start_type, #_ParserError<#error_type>>
         where
-            I: Iterator<Item = #token_type>,
+            I: #_Iterator<Item = #token_type>,
         {
             PARSER.parse(input).map(Parsed::#unwrap_start)
         }

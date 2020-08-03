@@ -12,6 +12,7 @@ use syn::Pat;
 use syn::Token;
 use syn::Type;
 use syn::Visibility;
+use proc_macro2::Span;
 
 pub mod keyword {
     syn::custom_keyword!(start);
@@ -101,6 +102,15 @@ impl Parse for PatSymbol {
 pub enum Symbol {
     Nonterminal(Ident),
     Terminal(LitStr),
+}
+
+impl Symbol {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::Nonterminal(i) => i.span(),
+            Self::Terminal(l) => l.span(),
+        }
+    }
 }
 
 impl Parse for Symbol {
