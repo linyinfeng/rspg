@@ -7,6 +7,7 @@ use quote::ToTokens;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use syn::Ident;
+use syn::Type;
 
 pub fn rspg(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let parsed = syn::parse_macro_input!(input as data::RspgMod);
@@ -175,9 +176,9 @@ fn token_impl(
 
     let pats2 = pats.clone();
     quote! {
-        impl ::rspg::token::Token<String> for #ty {
+        impl ::rspg::token::Token<::std::string::String> for #ty {
             #[allow(unused_variables)]
-            fn terminal(&self) -> String {
+            fn terminal(&self) -> ::std::string::String {
                 match self {
                     #(
                         #pats => #lits.to_string(),
@@ -187,10 +188,10 @@ fn token_impl(
 
             #[allow(unused_variables)]
             fn terminal_index<N>(
-                &self, grammar: &::rspg::grammar::Grammar<N, String>
+                &self, grammar: &::rspg::grammar::Grammar<N, ::std::string::String>
             ) -> ::rspg::grammar::TerminalIndex
             where
-                N: Ord,
+                N: ::std::cmp::Ord,
             {
                 match self {
                     #(
@@ -212,15 +213,26 @@ fn reducer(
     let rule_index_values = grammar.rule_indices().map(rspg::grammar::RuleIndex::value);
 
     let error_type = &content.error.ty;
-    let result_type = quote! {Result<Parsed, #error_type>};
+    let result_type = quote! {::std::result::Result<Parsed, #error_type>};
     let terminal_map = content
         .terminals
         .iter()
         .map(|t| (t.lit.value(), t))
         .collect();
-    let rule_body = rule_index_values
-        .clone()
-        .map(|i| rule_reducer(&quote! { _r.from }, &content.rules[i], &terminal_map));
+    let nonterminal_map = content
+        .nonterminals
+        .iter()
+        .map(|t| (t.ident.to_string(), t))
+        .collect();
+    let rule_body = rule_index_values.clone().map(|i| {
+        rule_reducer(
+            &quote! { _r.from },
+            &content.rules[i],
+            &terminal_map,
+            &nonterminal_map,
+            error_type,
+        )
+    });
     quote! {
         fn reducer(mut _r: ::rspg::lr1::parser::Reduce<Parsed, #token_type>) -> #result_type {
             match _r.rule.value() {
@@ -237,8 +249,11 @@ fn rule_reducer(
     from: &TokenStream,
     rule: &data::Rule,
     terminal_map: &BTreeMap<String, &data::TerminalDescription>,
+    nonterminal_map: &BTreeMap<String, &data::NonterminalDescription>,
+    error_type: &Type,
 ) -> TokenStream {
     let left = &rule.left;
+    let left_type = &nonterminal_map[&left.to_string()].ty;
     let body = &rule.body;
     let binders = rule
         .right
@@ -246,12 +261,13 @@ fn rule_reducer(
         .map(|pat_symbol| binder(from, pat_symbol, terminal_map));
     quote! {
         {
-            (|| {
-                #(
-                    #binders
-                )*
+            #(
+                #binders
+            )*
+            let value = (|| -> ::std::result::Result<#left_type, #error_type> {
                 #body
-            })().map(Parsed::#left)
+            })();
+            value.map(Parsed::#left)
         }
     }
 }
@@ -321,11 +337,12 @@ fn parser(content: &data::RspgContent) -> TokenStream {
             pub static ref PARSER: ::rspg::lr1::parser::Parser<
                 'static,
                 'static,
-                String,
-                String,
+                ::std::string::String,
+                ::std::string::String,
                 #token_type,
                 Parsed,
-                fn(::rspg::lr1::parser::Reduce<Parsed, #token_type>) -> Result<Parsed, #error_type>,
+                fn(::rspg::lr1::parser::Reduce<Parsed, #token_type>) ->
+                    ::std::result::Result<Parsed, #error_type>,
                 #error_type,
             > = ::rspg::lr1::parser::Parser {
                 grammar: &GRAMMAR,
