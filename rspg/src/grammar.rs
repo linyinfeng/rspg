@@ -454,7 +454,7 @@ where
         self
     }
 
-    fn add_and_get_nonterminal(&mut self, nonterminal: N) -> NonterminalIndex {
+    pub fn add_and_get_nonterminal(&mut self, nonterminal: N) -> NonterminalIndex {
         match self.nonterminal_index.entry(nonterminal.clone()) {
             Entry::Vacant(v) => {
                 let new_index = NonterminalIndex(self.nonterminals.len());
@@ -465,7 +465,7 @@ where
         }
     }
 
-    fn add_and_get_terminal(&mut self, terminal: T) -> TerminalIndex {
+    pub fn add_and_get_terminal(&mut self, terminal: T) -> TerminalIndex {
         match self.terminal_index.entry(terminal.clone()) {
             Entry::Vacant(v) => {
                 let new_index = TerminalIndex(self.terminals.len());

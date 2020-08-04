@@ -67,14 +67,14 @@ define_names! {
     _PhantomData => ::std::marker::PhantomData,
 }
 
-pub fn rspg(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let parsed = syn::parse_macro_input!(input as RspgMod);
-    // println!("{:#?}", parsed);
+pub fn generate(input: TokenStream) -> syn::Result<TokenStream> {
+    let parsed: RspgMod = syn::parse2(input)?;
+    // TODO: debug output
     let mod_vis = parsed.visibility;
     let mod_name = parsed.mod_name;
     let mod_outer_attrs = parsed.outer_attrs;
     let mod_inner_attrs = parsed.inner_attrs;
-    let contents = build_contents(parsed.content);
+    let contents = build_contents(parsed.content)?;
     let result = quote! {
         #(#mod_outer_attrs)*
         #mod_vis mod #mod_name {
@@ -83,21 +83,18 @@ pub fn rspg(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             #contents
         }
     };
-    result.into()
+    Ok(result)
 }
 
-struct Context {
+pub struct Context {
     content: RspgContent,
     grammar: Grammar<String, String>,
     nonterminal_map: BTreeMap<String, NonterminalDescription>,
     terminal_map: BTreeMap<String, TerminalDescription>,
 }
 
-fn build_contents(content: RspgContent) -> TokenStream {
-    let ctx = match build_context(content) {
-        Err(e) => return e,
-        Ok(g) => g,
-    };
+pub fn build_contents(content: RspgContent) -> syn::Result<TokenStream> {
+    let ctx = build_context(content)?;
 
     let rules: Vec<_> = ctx.grammar.rule_indices().collect();
     let first_sets = rspg::set::FirstSets::of_grammar(&ctx.grammar);
@@ -105,7 +102,7 @@ fn build_contents(content: RspgContent) -> TokenStream {
     let table =
         rspg::lr1::generator::Generator::construct(&ctx.grammar, &first_sets, "".to_string())
             .generate(&ctx.grammar)
-            .unwrap(); // Add diagnostic
+            .ok_or_else(|| syn::Error::new(Span::call_site(), "failed to construct LR(1) table"))?;
 
     let mut result = proc_macro2::TokenStream::new();
     use_names! { _Grammar, _Vec, _String, _RuleIndex, _FirstSets, _FollowSets, _Table, }
@@ -128,10 +125,10 @@ fn build_contents(content: RspgContent) -> TokenStream {
     result.extend(reducer(&ctx));
     result.extend(parser(&ctx));
 
-    result
+    Ok(result)
 }
 
-fn build_context(content: RspgContent) -> Result<Context, TokenStream> {
+pub fn build_context(content: RspgContent) -> syn::Result<Context> {
     let nonterminal_map: BTreeMap<_, _> = content
         .nonterminals
         .iter()
@@ -144,14 +141,21 @@ fn build_context(content: RspgContent) -> Result<Context, TokenStream> {
         .collect();
 
     let mut builder = rspg::grammar::GrammarBuilder::new();
-    let errors = RefCell::new(TokenStream::new());
+    content.nonterminals.iter().for_each(|n| {
+        builder.add_and_get_nonterminal(n.ident.to_string());
+    });
+    content.terminals.iter().for_each(|t| {
+        builder.add_and_get_terminal(t.lit.value());
+    });
+
+    let errors = RefCell::new(Vec::new());
     let meet_nonterminal = |n: &Ident| {
         let s = n.to_string();
         if !nonterminal_map.contains_key(&s) {
             let message = format!("undefined nonterminal: {}", s);
             errors
                 .borrow_mut()
-                .extend(quote_spanned! {n.span() => compile_error!(#message); });
+                .push(syn::Error::new_spanned(n, message));
         }
     };
     let meet_terminal = |t: &LitStr| {
@@ -160,7 +164,7 @@ fn build_context(content: RspgContent) -> Result<Context, TokenStream> {
             let message = format!("undefined terminal: {:?}", s);
             errors
                 .borrow_mut()
-                .extend(quote_spanned! {t.span() => compile_error!(#message); });
+                .push(syn::Error::new_spanned(t, message));
         }
     };
 
@@ -168,6 +172,7 @@ fn build_context(content: RspgContent) -> Result<Context, TokenStream> {
     meet_nonterminal(start);
     builder = builder.start(start.to_string());
     for rule in &content.rules {
+        meet_nonterminal(&rule.left);
         builder = builder.push_rule_left(rule.left.to_string());
         for right in &rule.right {
             builder = match &right.symbol {
@@ -184,19 +189,18 @@ fn build_context(content: RspgContent) -> Result<Context, TokenStream> {
     }
     let grammar = builder.build();
 
-    if errors.borrow().is_empty() {
-        Ok(Context {
+    match collect_errors(errors.into_inner().into_iter()) {
+        None => Ok(Context {
             content,
             grammar,
             nonterminal_map,
             terminal_map,
-        })
-    } else {
-        Err(errors.into_inner())
+        }),
+        Some(e) => Err(e),
     }
 }
 
-fn embed_data<T>(data: &T, name: &str, ty: TokenStream) -> TokenStream
+pub fn embed_data<T>(data: &T, name: &str, ty: TokenStream) -> TokenStream
 where
     T: serde::Serialize,
 {
@@ -211,7 +215,7 @@ where
     }
 }
 
-fn enum_parsed(ctx: &Context) -> TokenStream {
+pub fn enum_parsed(ctx: &Context) -> TokenStream {
     let Context {
         content: RspgContent { nonterminals, .. },
         ..
@@ -252,10 +256,7 @@ fn enum_parsed(ctx: &Context) -> TokenStream {
     result
 }
 
-// `_TerminalIndex` is used twice in this function,
-// causing quote create a new `non_snake_case` variable.
-#[allow(non_snake_case)]
-fn token_impl(ctx: &Context) -> TokenStream {
+pub fn token_impl(ctx: &Context) -> TokenStream {
     let Context {
         grammar,
         content: RspgContent {
@@ -274,37 +275,43 @@ fn token_impl(ctx: &Context) -> TokenStream {
 
     let pats2 = pats.clone();
     use_names! { _Grammar, _TerminalIndex, _String, _Token, _Ord, }
-    quote_spanned! {token.span() =>
-        impl #_Token<#_String> for #ty {
-            #[allow(unused_variables)]
-            fn terminal(&self) -> #_String {
-                match self {
-                    #(
-                        #pats => #lits.to_string(),
-                    )*
-                }
-            }
 
-            #[allow(unused_variables)]
-            fn terminal_index<N>(
-                &self, grammar: &#_Grammar<N, #_String>
-            ) -> #_TerminalIndex
-            where
-                N: #_Ord,
-            {
-                match self {
-                    #(
-                        #pats2 => unsafe {
-                            #_TerminalIndex::new(#indices)
-                        },
-                    )*
+    // `_TerminalIndex` is used twice in `quote!`,
+    // causing quote create a new `non_snake_case` variable.
+    #[allow(non_snake_case)]
+    {
+        quote_spanned! {token.span() =>
+            impl #_Token<#_String> for #ty {
+                #[allow(unused_variables)]
+                fn terminal(&self) -> #_String {
+                    match self {
+                        #(
+                            #pats => #lits.to_string(),
+                        )*
+                    }
+                }
+
+                #[allow(unused_variables)]
+                fn terminal_index<N>(
+                    &self, grammar: &#_Grammar<N, #_String>
+                ) -> #_TerminalIndex
+                where
+                    N: #_Ord,
+                {
+                    match self {
+                        #(
+                            #pats2 => unsafe {
+                                #_TerminalIndex::new(#indices)
+                            },
+                        )*
+                    }
                 }
             }
         }
     }
 }
 
-fn reducer(ctx: &Context) -> TokenStream {
+pub fn reducer(ctx: &Context) -> TokenStream {
     let Context {
         content, grammar, ..
     } = ctx;
@@ -334,7 +341,7 @@ fn reducer(ctx: &Context) -> TokenStream {
     }
 }
 
-fn rule_reducer(ctx: &Context, reduce: &Ident, rule: &data::Rule) -> TokenStream {
+pub fn rule_reducer(ctx: &Context, reduce: &Ident, rule: &data::Rule) -> TokenStream {
     let left = &rule.left;
     let left_type = &ctx.nonterminal_map[&left.to_string()].ty;
     let body = &rule.body;
@@ -358,7 +365,7 @@ fn rule_reducer(ctx: &Context, reduce: &Ident, rule: &data::Rule) -> TokenStream
     }
 }
 
-fn binder(ctx: &Context, reduce: &Ident, pat_symbol: &data::PatSymbol) -> TokenStream {
+pub fn binder(ctx: &Context, reduce: &Ident, pat_symbol: &data::PatSymbol) -> TokenStream {
     let data::PatSymbol { pat, symbol } = pat_symbol;
     let pat_tokens = match pat {
         Some((_, pat, _)) => pat.to_token_stream(),
@@ -397,7 +404,7 @@ fn binder(ctx: &Context, reduce: &Ident, pat_symbol: &data::PatSymbol) -> TokenS
     }
 }
 
-fn parser(ctx: &Context) -> TokenStream {
+pub fn parser(ctx: &Context) -> TokenStream {
     let Context { content, .. } = ctx;
 
     let token_type = &content.token.ty;
@@ -438,9 +445,22 @@ fn parser(ctx: &Context) -> TokenStream {
     }
 }
 
-fn unwrap_ident(i: &Ident) -> Ident {
+pub fn unwrap_ident(i: &Ident) -> Ident {
     Ident::new(
         &format!("unwrap_{}", i.to_string().to_lowercase()),
         i.span(),
     )
+}
+
+pub fn collect_errors<I>(mut es: I) -> Option<syn::Error>
+where
+    I: Iterator<Item = syn::Error>,
+{
+    match es.next() {
+        Some(mut first) => {
+            first.extend(es);
+            Some(first)
+        }
+        None => None,
+    }
 }
