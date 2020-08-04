@@ -8,7 +8,6 @@ use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote::quote_spanned;
-use quote::ToTokens;
 use rspg::grammar::Grammar;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -281,12 +280,14 @@ pub fn token_impl(ctx: &Context) -> TokenStream {
     #[allow(non_snake_case)]
     {
         quote_spanned! {token.span() =>
-            impl #_Token<#_String> for #ty {
+            pub struct WrappedToken(#ty);
+
+            impl #_Token<#_String> for WrappedToken {
                 #[allow(unused_variables)]
                 fn terminal(&self) -> #_String {
                     match self {
                         #(
-                            #pats => #lits.to_string(),
+                            WrappedToken(#pats) => #lits.to_string(),
                         )*
                     }
                 }
@@ -300,7 +301,7 @@ pub fn token_impl(ctx: &Context) -> TokenStream {
                 {
                     match self {
                         #(
-                            #pats2 => unsafe {
+                            WrappedToken(#pats2) => unsafe {
                                 #_TerminalIndex::new(#indices)
                             },
                         )*
@@ -316,7 +317,6 @@ pub fn reducer(ctx: &Context) -> TokenStream {
         content, grammar, ..
     } = ctx;
 
-    let token_type = &content.token.ty;
     let rule_index_values = grammar.rule_indices().map(rspg::grammar::RuleIndex::value);
 
     let error_type = &content.error.ty;
@@ -330,7 +330,7 @@ pub fn reducer(ctx: &Context) -> TokenStream {
 
     use_names! { _Reduce, }
     quote! {
-        fn reducer(mut #reduce: #_Reduce<Parsed, #token_type>) -> #result_type {
+        fn reducer(mut #reduce: #_Reduce<Parsed, WrappedToken>) -> #result_type {
             match #reduce.rule.value() {
                 #(
                     #rule_index_values => #rule_body,
@@ -367,40 +367,41 @@ pub fn rule_reducer(ctx: &Context, reduce: &Ident, rule: &data::Rule) -> TokenSt
 
 pub fn binder(ctx: &Context, reduce: &Ident, pat_symbol: &data::PatSymbol) -> TokenStream {
     let data::PatSymbol { pat, symbol } = pat_symbol;
-    let pat_tokens = match pat {
-        Some((_, pat, _)) => pat.to_token_stream(),
-        None => quote_spanned! {symbol.span() => _ },
-    };
-    let expr = match symbol {
-        data::Symbol::Nonterminal(n) => {
-            let unwrapper = unwrap_ident(n);
-            quote_spanned! {pat_symbol.span() =>
-                #reduce.from
-                    .pop_front()
-                    .expect("expect a stack item")
-                    .parsed()
-                    .expect("expect a nonterminal")
-                    .#unwrapper()
-            }
-        }
-        data::Symbol::Terminal(t) => {
-            let terminal = &ctx.terminal_map[&t.value()];
-            let pat = &terminal.pat;
-            let expr = &terminal.expr;
-            quote_spanned! {pat_symbol.span() =>
-                match #reduce.from
-                        .pop_front()
-                        .expect("expect a stack item")
-                        .token()
-                        .expect("expect a terminal") {
-                    #pat => #expr,
-                    _ => unreachable!(),
+    match pat {
+        None => TokenStream::new(),
+        Some((_, pat, _)) => {
+            let expr = match symbol {
+                data::Symbol::Nonterminal(n) => {
+                    let unwrapper = unwrap_ident(n);
+                    quote_spanned! {pat_symbol.span() =>
+                        #reduce.from
+                            .pop_front()
+                            .expect("expect a stack item")
+                            .parsed()
+                            .expect("expect a nonterminal")
+                            .#unwrapper()
+                    }
                 }
+                data::Symbol::Terminal(t) => {
+                    let terminal = &ctx.terminal_map[&t.value()];
+                    let pat = &terminal.pat;
+                    let expr = &terminal.expr;
+                    quote_spanned! {pat_symbol.span() =>
+                        match #reduce.from
+                                .pop_front()
+                                .expect("expect a stack item")
+                                .token()
+                                .expect("expect a terminal") {
+                            WrappedToken(#pat) => #expr,
+                            _ => unreachable!(),
+                        }
+                    }
+                }
+            };
+            quote_spanned! {pat_symbol.span() =>
+                let #pat = #expr;
             }
         }
-    };
-    quote_spanned! {pat_symbol.span() =>
-        let #pat_tokens = #expr;
     }
 }
 
@@ -424,9 +425,9 @@ pub fn parser(ctx: &Context) -> TokenStream {
                 'static,
                 #_String,
                 #_String,
-                #token_type,
+                WrappedToken,
                 Parsed,
-                fn(#_Reduce<Parsed, #token_type>) -> #_Result<Parsed, #error_type>,
+                fn(#_Reduce<Parsed, WrappedToken>) -> #_Result<Parsed, #error_type>,
                 #error_type,
             > = #_Parser {
                 grammar: &GRAMMAR,
@@ -440,7 +441,7 @@ pub fn parser(ctx: &Context) -> TokenStream {
         where
             I: #_Iterator<Item = #token_type>,
         {
-            PARSER.parse(input).map(Parsed::#unwrap_start)
+            PARSER.parse(input.map(WrappedToken)).map(Parsed::#unwrap_start)
         }
     }
 }
