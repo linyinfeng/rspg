@@ -12,6 +12,7 @@ use quote::ToTokens;
 use rspg::grammar::Grammar;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
+use syn::spanned::Spanned;
 use syn::Ident;
 use syn::LitStr;
 
@@ -273,7 +274,7 @@ fn token_impl(ctx: &Context) -> TokenStream {
 
     let pats2 = pats.clone();
     use_names! { _Grammar, _TerminalIndex, _String, _Token, _Ord, }
-    quote! {
+    quote_spanned! {token.span() =>
         impl #_Token<#_String> for #ty {
             #[allow(unused_variables)]
             fn terminal(&self) -> #_String {
@@ -343,11 +344,12 @@ fn rule_reducer(ctx: &Context, reduce: &Ident, rule: &data::Rule) -> TokenStream
         .map(|pat_symbol| binder(ctx, reduce, pat_symbol));
     let error_type = &ctx.content.error.ty;
     use_names! { _Result, }
-    quote! {
+    quote_spanned! {rule.span() =>
         {
             #(
                 #binders
             )*
+            #[allow(clippy::redundant_closure_call)]
             let value = (|| -> #_Result<#left_type, #error_type> {
                 #body
             })();
@@ -359,26 +361,26 @@ fn rule_reducer(ctx: &Context, reduce: &Ident, rule: &data::Rule) -> TokenStream
 fn binder(ctx: &Context, reduce: &Ident, pat_symbol: &data::PatSymbol) -> TokenStream {
     let data::PatSymbol { pat, symbol } = pat_symbol;
     let pat_tokens = match pat {
-        Some((pat, _)) => pat.to_token_stream(),
+        Some((_, pat, _)) => pat.to_token_stream(),
         None => quote_spanned! {symbol.span() => _ },
     };
     let expr = match symbol {
         data::Symbol::Nonterminal(n) => {
             let unwrapper = unwrap_ident(n);
-            quote! {
+            quote_spanned! {pat_symbol.span() =>
                 #reduce.from
                     .pop_front()
                     .expect("expect a stack item")
                     .parsed()
                     .expect("expect a nonterminal")
-                    .#unwrapper();
+                    .#unwrapper()
             }
         }
         data::Symbol::Terminal(t) => {
             let terminal = &ctx.terminal_map[&t.value()];
             let pat = &terminal.pat;
             let expr = &terminal.expr;
-            quote! {
+            quote_spanned! {pat_symbol.span() =>
                 match #reduce.from
                         .pop_front()
                         .expect("expect a stack item")
@@ -390,7 +392,7 @@ fn binder(ctx: &Context, reduce: &Ident, pat_symbol: &data::PatSymbol) -> TokenS
             }
         }
     };
-    quote! {
+    quote_spanned! {pat_symbol.span() =>
         let #pat_tokens = #expr;
     }
 }

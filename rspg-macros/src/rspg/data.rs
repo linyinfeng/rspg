@@ -1,4 +1,5 @@
-use proc_macro2::Span;
+use proc_macro2::TokenStream;
+use quote::ToTokens;
 use syn::braced;
 use syn::parenthesized;
 use syn::parse;
@@ -13,6 +14,7 @@ use syn::Pat;
 use syn::Token;
 use syn::Type;
 use syn::Visibility;
+use token::Paren;
 
 pub mod keyword {
     syn::custom_keyword!(start);
@@ -71,11 +73,25 @@ impl Parse for Rule {
     }
 }
 
+impl ToTokens for Rule {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.rule.to_tokens(tokens);
+        self.left.to_tokens(tokens);
+        self.arrow.to_tokens(tokens);
+        for symbol in &self.right {
+            symbol.to_tokens(tokens);
+        }
+        self.double_arrow.to_tokens(tokens);
+        self.body.to_tokens(tokens);
+        self.semicolon.to_tokens(tokens);
+    }
+}
+
 type SymbolString = Vec<PatSymbol>;
 
 #[derive(Debug, Clone)]
 pub struct PatSymbol {
-    pub pat: Option<(Pat, Token![:])>,
+    pub pat: Option<(Paren, Pat, Token![:])>,
     pub symbol: Symbol,
 }
 
@@ -89,11 +105,28 @@ impl Parse for PatSymbol {
             })
         } else {
             let content;
-            parenthesized!(content in input);
+            #[allow(clippy::eval_order_dependence)]
             Ok(PatSymbol {
-                pat: Some((content.parse()?, content.parse()?)),
+                pat: Some((
+                    parenthesized!(content in input),
+                    content.parse()?,
+                    content.parse()?,
+                )),
                 symbol: content.parse()?,
             })
+        }
+    }
+}
+
+impl ToTokens for PatSymbol {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match &self.pat {
+            Some((paren, pat, comma)) => paren.surround(tokens, |t| {
+                pat.to_tokens(t);
+                comma.to_tokens(t);
+                self.symbol.to_tokens(t);
+            }),
+            None => self.symbol.to_tokens(tokens),
         }
     }
 }
@@ -104,15 +137,6 @@ pub enum Symbol {
     Terminal(LitStr),
 }
 
-impl Symbol {
-    pub fn span(&self) -> Span {
-        match self {
-            Self::Nonterminal(i) => i.span(),
-            Self::Terminal(l) => l.span(),
-        }
-    }
-}
-
 impl Parse for Symbol {
     fn parse(input: ParseStream) -> parse::Result<Self> {
         let lookahead = input.lookahead1();
@@ -120,6 +144,15 @@ impl Parse for Symbol {
             Ok(Symbol::Nonterminal(input.parse()?))
         } else {
             Ok(Symbol::Terminal(input.parse()?))
+        }
+    }
+}
+
+impl ToTokens for Symbol {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Nonterminal(i) => i.to_tokens(tokens),
+            Self::Terminal(l) => l.to_tokens(tokens),
         }
     }
 }
@@ -195,6 +228,14 @@ impl Parse for TokenDescription {
             ty: input.parse()?,
             semicolon: input.parse()?,
         })
+    }
+}
+
+impl ToTokens for TokenDescription {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.token.to_tokens(tokens);
+        self.ty.to_tokens(tokens);
+        self.semicolon.to_tokens(tokens);
     }
 }
 
