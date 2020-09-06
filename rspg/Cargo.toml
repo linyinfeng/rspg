@@ -1,6 +1,6 @@
 [package]
 name = "rspg"
-version = "0.0.3"
+version = "0.0.4-alpha"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
 edition = "2018"
 description = "Simple LR(1) parser generator library."
