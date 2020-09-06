@@ -13,4 +13,4 @@ readme = "README.md"
 
 [dependencies]
 prettytable-rs = "0.8.0"
-serde = { version = "1.0.114", features = ["derive"] }
+serde = { version = "1.0.115", features = ["derive"] }
