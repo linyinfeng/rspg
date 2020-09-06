@@ -1,6 +1,6 @@
 [package]
 name = "rspg-macros"
-version = "0.0.3-alpha.0"
+version = "0.0.3"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
 edition = "2018"
 description = "Macros for rspg."
@@ -15,7 +15,7 @@ readme = "README.md"
 proc-macro = true
 
 [dependencies]
-rspg = { version = "^0.0.3-alpha.0", path = "../rspg" }
+rspg = { version = "0.0.3", path = "../rspg" }
 syn = { version = "1.0.40", features = ["full", "extra-traits"] }
 quote = "1.0.7"
 proc-macro2 = "1.0.20"
