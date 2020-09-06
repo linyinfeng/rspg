@@ -8,6 +8,7 @@ use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
 use quote::quote_spanned;
+use quote::ToTokens;
 use rspg::grammar::Grammar;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
@@ -367,41 +368,40 @@ pub fn rule_reducer(ctx: &Context, reduce: &Ident, rule: &data::Rule) -> TokenSt
 
 pub fn binder(ctx: &Context, reduce: &Ident, pat_symbol: &data::PatSymbol) -> TokenStream {
     let data::PatSymbol { pat, symbol } = pat_symbol;
-    match pat {
-        None => TokenStream::new(),
-        Some((_, pat, _)) => {
-            let expr = match symbol {
-                data::Symbol::Nonterminal(n) => {
-                    let unwrapper = unwrap_ident(n);
-                    quote_spanned! {pat_symbol.span() =>
-                        #reduce.from
-                            .pop_front()
-                            .expect("expect a stack item")
-                            .parsed()
-                            .expect("expect a nonterminal")
-                            .#unwrapper()
-                    }
-                }
-                data::Symbol::Terminal(t) => {
-                    let terminal = &ctx.terminal_map[&t.value()];
-                    let pat = &terminal.pat;
-                    let expr = &terminal.expr;
-                    quote_spanned! {pat_symbol.span() =>
-                        match #reduce.from
-                                .pop_front()
-                                .expect("expect a stack item")
-                                .token()
-                                .expect("expect a terminal") {
-                            WrappedToken(#pat) => #expr,
-                            _ => unreachable!(),
-                        }
-                    }
-                }
-            };
+    let expr = match symbol {
+        data::Symbol::Nonterminal(n) => {
+            let unwrapper = unwrap_ident(n);
             quote_spanned! {pat_symbol.span() =>
-                let #pat = #expr;
+                #reduce.from
+                    .pop_front()
+                    .expect("expect a stack item")
+                    .parsed()
+                    .expect("expect a nonterminal")
+                    .#unwrapper()
             }
         }
+        data::Symbol::Terminal(t) => {
+            let terminal = &ctx.terminal_map[&t.value()];
+            let terminal_pat = &terminal.pat;
+            let expr = &terminal.expr;
+            quote_spanned! {pat_symbol.span() =>
+                match #reduce.from
+                        .pop_front()
+                        .expect("expect a stack item")
+                        .token()
+                        .expect("expect a terminal") {
+                    WrappedToken(#terminal_pat) => #expr,
+                    _ => unreachable!(),
+                }
+            }
+        }
+    };
+    let pat = pat
+        .clone()
+        .map(|(_, p, _)| p.to_token_stream())
+        .unwrap_or(quote_spanned! { expr.span() => _ });
+    quote_spanned! {pat_symbol.span() =>
+        let #pat = #expr;
     }
 }
 
