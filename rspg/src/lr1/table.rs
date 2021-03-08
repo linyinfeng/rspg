@@ -206,15 +206,15 @@ impl Table {
         use prettytable::{Cell, Row};
         let mut table = prettytable::Table::new();
         table.add_row({
-            let mut cells = Vec::new();
-            cells.push(Cell::new(""));
-            cells.push(Cell::new("action").with_hspan(grammar.terminals_len() + 1));
-            cells.push(Cell::new("goto").with_hspan(grammar.nonterminals_len()));
+            let cells = vec![
+                Cell::new(""),
+                Cell::new("action").with_hspan(grammar.terminals_len() + 1),
+                Cell::new("goto").with_hspan(grammar.nonterminals_len()),
+            ];
             Row::new(cells)
         });
         table.add_row({
-            let mut cells = Vec::new();
-            cells.push(Cell::new(""));
+            let mut cells = vec![Cell::new("")];
             for terminal in grammar.terminal_indices() {
                 cells.push(Cell::new(&format!("{}", terminal.display_with(grammar))));
             }
