@@ -226,8 +226,7 @@ impl Table {
         });
         for state in self.states() {
             table.add_row({
-                let mut cells = Vec::new();
-                cells.push(Cell::new(&format!("{}", state)));
+                let mut cells = vec![Cell::new(&format!("{}", state))];
                 for terminal in grammar.terminal_indices() {
                     if detailed {
                         cells.push(Cell::new(&format!(
