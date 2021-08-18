@@ -130,7 +130,7 @@ impl FirstSets {
             },
         ));
         loop {
-            if !sets.iteration(&grammar) {
+            if !sets.iteration(grammar) {
                 // if not changed
                 break;
             }
