@@ -78,54 +78,44 @@ mod tests {
         let mut rule_indices = grammar.rule_indices();
         let first_rule = rule_indices.next().unwrap();
         let second_rule = rule_indices.next().unwrap();
-        assert_eq!(
-            Item {
+        assert!(
+            !(Item {
                 rule: first_rule,
                 location: 0,
             }
-            .finished(&grammar),
-            false
+            .finished(&grammar))
         );
-        assert_eq!(
-            Item {
+        assert!(
+            !(Item {
                 rule: first_rule,
                 location: 1,
             }
-            .finished(&grammar),
-            false
+            .finished(&grammar))
         );
-        assert_eq!(
-            Item {
+        assert!(
+            !(Item {
                 rule: first_rule,
                 location: 2,
             }
-            .finished(&grammar),
-            false
+            .finished(&grammar))
         );
-        assert_eq!(
-            Item {
+        assert!(
+            !(Item {
                 rule: first_rule,
                 location: 3,
             }
-            .finished(&grammar),
-            false
+            .finished(&grammar))
         );
-        assert_eq!(
-            Item {
-                rule: first_rule,
-                location: 4,
-            }
-            .finished(&grammar),
-            true
-        );
-        assert_eq!(
-            Item {
-                rule: second_rule,
-                location: 0,
-            }
-            .finished(&grammar),
-            true
-        );
+        assert!(Item {
+            rule: first_rule,
+            location: 4,
+        }
+        .finished(&grammar));
+        assert!(Item {
+            rule: second_rule,
+            location: 0,
+        }
+        .finished(&grammar));
     }
 
     #[test]
