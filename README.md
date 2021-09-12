@@ -3,6 +3,7 @@
 [![CI](https://github.com/linyinfeng/rspg/workflows/CI/badge.svg)](https://github.com/linyinfeng/rspg/actions)
 [![crates.io](https://img.shields.io/crates/v/rspg.svg)](https://crates.io/crates/rspg)
 [![docs.rs](https://docs.rs/rspg/badge.svg)](https://docs.rs/rspg)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Flinyinfeng%2Frspg.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Flinyinfeng%2Frspg?ref=badge_shield)
 
 A simple **experimental** LR(1) rust parser generator library for syntactic analysis learning.
 
@@ -113,3 +114,7 @@ fn main() {
     ...
 }
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Flinyinfeng%2Frspg.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Flinyinfeng%2Frspg?ref=badge_large)
