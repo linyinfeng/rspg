@@ -173,9 +173,10 @@ where
     N: Ord + Clone,
     T: Ord + Clone,
 {
-    if grammar.contains_nonterminal(&nonterminal) {
-        panic!("new start is existed in grammar");
-    }
+    assert!(
+        !grammar.contains_nonterminal(&nonterminal),
+        "new start is existed in grammar"
+    );
     let start = grammar.start().clone();
     let builder = GrammarBuilder::from_grammar(grammar.clone())
         .push_rule_left(nonterminal.clone())
