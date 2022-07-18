@@ -105,7 +105,6 @@ impl Parse for PatSymbol {
             })
         } else {
             let content;
-            #[allow(clippy::eval_order_dependence)]
             Ok(PatSymbol {
                 pat: Some((
                     parenthesized!(content in input),
@@ -314,7 +313,6 @@ pub struct RspgMod {
 impl Parse for RspgMod {
     fn parse(input: ParseStream) -> parse::Result<Self> {
         let content;
-        #[allow(clippy::eval_order_dependence)]
         Ok(RspgMod {
             outer_attrs: input.call(Attribute::parse_outer)?,
             visibility: input.parse()?,
