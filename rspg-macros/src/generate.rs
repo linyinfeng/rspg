@@ -331,6 +331,7 @@ pub fn reducer(ctx: &Context) -> TokenStream {
 
     use_names! { _Reduce, }
     quote! {
+        #[allow(clippy::let_unit_value)]
         fn reducer(mut #reduce: #_Reduce<Parsed, WrappedToken>) -> #result_type {
             match #reduce.rule.value() {
                 #(
