@@ -96,7 +96,7 @@ fn main() {
         lambda::TABLE.pretty_table(&lambda::GRAMMAR, false)
     );
 
-    let mut rl = rustyline::Editor::<()>::new();
+    let mut rl = rustyline::Editor::<()>::new().unwrap();
     if rl.load_history("rspg-lambda-history.txt").is_err() {
         info!("no previous history.");
     }

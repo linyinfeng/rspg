@@ -2,7 +2,7 @@
 name = "rspg"
 version = "0.0.4-alpha"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
-edition = "2018"
+edition = "2021"
 description = "Simple LR(1) parser generator library."
 license = "MIT"
 homepage = "https://github.com/linyinfeng/rspg"
@@ -13,4 +13,4 @@ readme = "README.md"
 
 [dependencies]
 prettytable-rs = "0.8.0"
-serde = { version = "1.0.126", features = ["derive"] }
+serde = { version = "1.0.139", features = ["derive"] }

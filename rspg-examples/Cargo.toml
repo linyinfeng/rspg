@@ -2,7 +2,7 @@
 name = "rspg-examples"
 version = "0.0.4-alpha"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
-edition = "2018"
+edition = "2021"
 publish = false
 
 [[bin]]
@@ -21,7 +21,7 @@ path = "src/simple-calculator/main.rs"
 rspg = { path = "../rspg" }
 rspg-macros = { path = "../rspg-macros" }
 lazy_static = "1.4.0"
-log = "0.4.14"
+log = "0.4.17"
 env_logger = "0.9.0"
-rustyline = "9.0.0"
-ron = "0.7.0"
+rustyline = "10.0.0"
+ron = "0.7.1"

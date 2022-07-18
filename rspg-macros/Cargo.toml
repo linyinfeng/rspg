@@ -2,7 +2,7 @@
 name = "rspg-macros"
 version = "0.0.4-alpha"
 authors = ["Lin Yinfeng <lin.yinfeng@outlook.com>"]
-edition = "2018"
+edition = "2021"
 description = "Macros for rspg."
 license = "MIT"
 homepage = "https://github.com/linyinfeng/rspg"
@@ -16,8 +16,8 @@ proc-macro = true
 
 [dependencies]
 rspg = { version = "0.0.4-alpha", path = "../rspg" }
-syn = { version = "1.0.73", features = ["full", "extra-traits"] }
-quote = "1.0.9"
-proc-macro2 = "1.0.27"
-serde = "1.0.126"
-ron = "0.7.0"
+syn = { version = "1.0.98", features = ["full", "extra-traits"] }
+quote = "1.0.20"
+proc-macro2 = "1.0.40"
+serde = "1.0.139"
+ron = "0.7.1"
