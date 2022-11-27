@@ -22,6 +22,6 @@ rspg = { path = "../rspg" }
 rspg-macros = { path = "../rspg-macros" }
 lazy_static = "1.4.0"
 log = "0.4.17"
-env_logger = "0.9.0"
+env_logger = "0.10.0"
 rustyline = "10.0.0"
 ron = "0.8.0"
