@@ -12,5 +12,5 @@ categories = ["parsing"]
 readme = "README.md"
 
 [dependencies]
-prettytable-rs = "0.9.0" # TODO deprecated
+prettytable-rs = "0.10.0" # TODO deprecated
 serde = { version = "1.0.143", features = ["derive"] }
