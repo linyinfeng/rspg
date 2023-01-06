@@ -152,7 +152,7 @@ pub fn build_context(content: RspgContent) -> syn::Result<Context> {
     let meet_nonterminal = |n: &Ident| {
         let s = n.to_string();
         if !nonterminal_map.contains_key(&s) {
-            let message = format!("undefined nonterminal: {}", s);
+            let message = format!("undefined nonterminal: {s}");
             errors
                 .borrow_mut()
                 .push(syn::Error::new_spanned(n, message));
@@ -161,7 +161,7 @@ pub fn build_context(content: RspgContent) -> syn::Result<Context> {
     let meet_terminal = |t: &LitStr| {
         let s = t.value();
         if !terminal_map.contains_key(&s) {
-            let message = format!("undefined terminal: {:?}", s);
+            let message = format!("undefined terminal: {s:?}");
             errors
                 .borrow_mut()
                 .push(syn::Error::new_spanned(t, message));
@@ -206,7 +206,7 @@ where
 {
     let ident = Ident::new(name, Span::call_site());
     let string =
-        ron::ser::to_string(data).unwrap_or_else(|_| panic!("failed to serialize data {}", name));
+        ron::ser::to_string(data).unwrap_or_else(|_| panic!("failed to serialize data {name}"));
     use_names! { _lazy_static, _ron_from_str, }
     quote! {
         #_lazy_static! {

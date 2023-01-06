@@ -115,8 +115,8 @@ pub enum Symbol {
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Symbol::Nonterminal(n) => write!(f, "{}", n),
-            Symbol::Terminal(t) => write!(f, "{}", t),
+            Symbol::Nonterminal(n) => write!(f, "{n}"),
+            Symbol::Terminal(t) => write!(f, "{t}"),
         }
     }
 }
@@ -172,7 +172,7 @@ impl fmt::Display for SymbolString {
                 if i != 0 {
                     write!(f, " ")?;
                 }
-                write!(f, "{}", symbol)?;
+                write!(f, "{symbol}")?;
             }
         }
         Ok(())
@@ -356,7 +356,7 @@ where
         write!(f, "    start ")?;
         writeln!(f, "{}", self.start.display_with(self))?;
         for i in self.rule_indices() {
-            write!(f, "    rule {}: ", i)?;
+            write!(f, "    rule {i}: ")?;
             writeln!(f, "{}", self.rule(i).display_with(self))?;
         }
         write!(f, "}}")?;
@@ -623,7 +623,7 @@ mod tests {
     fn display_grammar() {
         let grammar = example_grammar();
         assert_eq!(
-            format!("\n{}\n", grammar),
+            format!("\n{grammar}\n"),
             r#"
 grammar {
     start E
@@ -670,7 +670,7 @@ grammar {
             .start("E'")
             .build();
         assert_eq!(
-            format!("\n{}\n", grammar),
+            format!("\n{grammar}\n"),
             r#"
 grammar {
     start E'

@@ -31,7 +31,7 @@ where
             SymbolStackItem::Nonterminal(n, p) => {
                 write!(f, "{}{{{:?}}}", n.display_with(grammar), p)
             }
-            SymbolStackItem::Token(t) => write!(f, "{:?}", t),
+            SymbolStackItem::Token(t) => write!(f, "{t:?}"),
         }
     }
 }

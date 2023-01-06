@@ -40,7 +40,7 @@ fn main() {
         rule F -> Terminal::Sign('('), E, Terminal::Sign(')');
         rule F -> Terminal::Number;
     };
-    println!("{}\n", grammar);
+    println!("{grammar}\n");
 
     let first_sets = FirstSets::of_grammar(&grammar);
     println!("first sets:\n{}\n", first_sets.display_with(&grammar));
@@ -78,14 +78,14 @@ fn main() {
         Token::Number(6.),
         Token::Sign(')'),
     ];
-    println!("input:\n{:?}\n", input);
+    println!("input:\n{input:?}\n");
 
     print!("input pretty printed:");
     for token in &input {
         print!(" ");
         match token {
-            Token::Number(n) => print!("{}", n),
-            Token::Sign(s) => print!("{}", s),
+            Token::Number(n) => print!("{n}"),
+            Token::Sign(s) => print!("{s}"),
         }
     }
     println!("\n");
@@ -151,7 +151,7 @@ fn main() {
     };
     println!("events:");
     match parser.parse(input.into_iter()) {
-        Ok(p) => println!("accepted: {:?}", p),
-        Err(e) => println!("error: {:?}", e),
+        Ok(p) => println!("accepted: {p:?}"),
+        Err(e) => println!("error: {e:?}"),
     }
 }

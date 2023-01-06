@@ -122,7 +122,7 @@ fn main() {
                     Ok(t) => {
                         // `p` has type `Term`
                         debug!("result: {:#?}", t);
-                        println!("{}", t);
+                        println!("{t}");
                     }
                     Err(e) => error!("parse error: {:?}", e),
                 }
@@ -140,9 +140,9 @@ fn main() {
 impl fmt::Display for Term {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Term::Variable(v) => write!(f, "{}", v),
-            Term::Abstraction(v, t) => write!(f, "(λ{}. {})", v, t),
-            Term::Application(t1, t2) => write!(f, "({} {})", t1, t2),
+            Term::Variable(v) => write!(f, "{v}"),
+            Term::Abstraction(v, t) => write!(f, "(λ{v}. {t})"),
+            Term::Application(t1, t2) => write!(f, "({t1} {t2})"),
         }
     }
 }
@@ -161,7 +161,7 @@ pub enum TokensError {
 impl fmt::Display for TokensError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            TokensError::InvalidChar(c) => write!(f, "ignored invalid char '{}'", c),
+            TokensError::InvalidChar(c) => write!(f, "ignored invalid char '{c}'"),
         }
     }
 }

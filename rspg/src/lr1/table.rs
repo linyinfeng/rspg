@@ -39,9 +39,9 @@ impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Action::Reduce(index) => {
-                write!(f, "r{}", index)?;
+                write!(f, "r{index}")?;
             }
-            Action::Shift(state) => write!(f, "s{}", state)?,
+            Action::Shift(state) => write!(f, "s{state}")?,
             Action::Error => write!(f, "")?,
         }
         Ok(())
@@ -58,7 +58,7 @@ where
             Action::Reduce(index) => {
                 write!(f, "r{}", index.display_with(grammar))?;
             }
-            Action::Shift(state) => write!(f, "s{}", state)?,
+            Action::Shift(state) => write!(f, "s{state}")?,
             Action::Error => write!(f, "")?,
         }
         Ok(())
@@ -83,7 +83,7 @@ impl fmt::Display for EndAction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             EndAction::Reduce(index) => {
-                write!(f, "r{}", index)?;
+                write!(f, "r{index}")?;
             }
             EndAction::Accept => write!(f, "acc")?,
             EndAction::Error => write!(f, "")?,
@@ -124,7 +124,7 @@ pub enum Goto {
 impl fmt::Display for Goto {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Goto::Goto(state) => write!(f, "{}", state),
+            Goto::Goto(state) => write!(f, "{state}"),
             Goto::Error => write!(f, ""),
         }
     }
@@ -226,7 +226,7 @@ impl Table {
         });
         for state in self.states() {
             table.add_row({
-                let mut cells = vec![Cell::new(&format!("{}", state))];
+                let mut cells = vec![Cell::new(&format!("{state}"))];
                 for terminal in grammar.terminal_indices() {
                     if detailed {
                         cells.push(Cell::new(&format!(
